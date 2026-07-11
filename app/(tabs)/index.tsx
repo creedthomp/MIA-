@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import Animated, {
   withTiming,
   withDelay,
   Easing,
+  cancelAnimation,
+  runOnJS,
 } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 
@@ -41,74 +43,145 @@ const C = {
 const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
 // ───────────────────────────────────────────────────────────────
 
-// ── Animated dice (float) ─────────────────────────────────────
-function HeroDice({ size }: { size: number }) {
-  const y1 = useSharedValue(0);
-  const y2 = useSharedValue(0);
+// ── Interactive die ───────────────────────────────────────────
+interface HoverDieProps {
+  size: number;
+  dark?: boolean;
+  floatAmount: number;
+  floatDuration: number;
+  floatDelay?: number;
+  rotateDir?: 1 | -1;
+  outerStyle?: object;
+  children?: React.ReactNode;
+}
 
-  useEffect(() => {
-    y1.value = withRepeat(
-      withSequence(
-        withTiming(-12, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0,   { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-    );
-    y2.value = withDelay(600, withRepeat(
-      withSequence(
-        withTiming(-8, { duration: 2300, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0,  { duration: 2300, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-    ));
-  }, []);
-
-  const s1 = useAnimatedStyle(() => ({ transform: [{ translateY: y1.value }] }));
-  const s2 = useAnimatedStyle(() => ({ transform: [{ translateY: y2.value }] }));
-
-  const dot = Math.round(size * 0.16);
-  const dotOff = Math.round(size * 0.2);
+function HoverDie({
+  size, dark = false, floatAmount, floatDuration, floatDelay = 0,
+  rotateDir = 1, outerStyle, children,
+}: HoverDieProps) {
   const r = Math.round(size * 0.173);
+  const yIdle   = useSharedValue(0);
+  const yBounce = useSharedValue(0);
+  const scaleV  = useSharedValue(1);
+  const rotateV = useSharedValue(0);
+  const isPlaying = useRef(false);
+
+  const startIdle = useCallback(() => {
+    yIdle.value = withDelay(
+      floatDelay,
+      withRepeat(
+        withSequence(
+          withTiming(-floatAmount, { duration: floatDuration, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0,            { duration: floatDuration, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+      ),
+    );
+  }, [floatAmount, floatDuration, floatDelay]);
+
+  useEffect(() => { startIdle(); }, [startIdle]);
+
+  const onComplete = useCallback(() => {
+    isPlaying.current = false;
+    startIdle();
+  }, [startIdle]);
+
+  const triggerHover = useCallback(() => {
+    if (isPlaying.current) return;
+    isPlaying.current = true;
+
+    // Stop idle float cleanly
+    cancelAnimation(yIdle);
+    yIdle.value = withTiming(0, { duration: 60 });
+
+    // Rise → wobble → settle  (yBounce drives the callback)
+    yBounce.value = withSequence(
+      withTiming(-28, { duration: 110 }),
+      withTiming(-14, { duration: 70 }),
+      withTiming(-24, { duration: 70 }),
+      withTiming(7,   { duration: 110 }),
+      withTiming(0,   { duration: 200, easing: Easing.out(Easing.ease) }, () => {
+        runOnJS(onComplete)();
+      }),
+    );
+
+    // Tilt shake
+    rotateV.value = withSequence(
+      withTiming(13 * rotateDir,  { duration: 90 }),
+      withTiming(-10 * rotateDir, { duration: 110 }),
+      withTiming(5 * rotateDir,   { duration: 80 }),
+      withTiming(0,               { duration: 160 }),
+    );
+
+    // Scale pop
+    scaleV.value = withSequence(
+      withTiming(1.16, { duration: 80 }),
+      withTiming(0.96, { duration: 60 }),
+      withTiming(1.07, { duration: 70 }),
+      withTiming(1.0,  { duration: 350 }),
+    );
+  }, [rotateDir, onComplete]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: yIdle.value + yBounce.value },
+      { scale: scaleV.value },
+      { rotate: `${rotateV.value}deg` },
+    ],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width: size, height: size, borderRadius: r,
+          backgroundColor: dark ? "#1a1a1a" : "#efefef",
+          ...(dark ? { borderWidth: 1, borderColor: "#2a2a2a" } : {}),
+        },
+        outerStyle,
+        animStyle,
+      ]}
+      // @ts-ignore — react-native-web prop, ignored on native
+      onMouseEnter={triggerHover}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+// ── Hero dice pair ────────────────────────────────────────────
+function HeroDice({ size }: { size: number }) {
+  const dot  = Math.round(size * 0.16);
+  const dotO = Math.round(size * 0.2);
   const offset = Math.round(size * 0.467);
 
   return (
-    <View style={{ position: "relative", height: size * 2 + 40, width: size * 2 + 28, alignItems: "flex-start" }}>
-      {/* Dark die — 2 */}
-      <Animated.View
-        style={[
-          {
-            width: size, height: size, borderRadius: r,
-            backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#2a2a2a",
-          },
-          s1,
-        ]}
-      >
-        <View style={{ position: "absolute", width: dot, height: dot, borderRadius: dot / 2, backgroundColor: "#f4f4f4", top: dotOff, left: dotOff }} />
-        <View style={{ position: "absolute", width: dot, height: dot, borderRadius: dot / 2, backgroundColor: "#f4f4f4", bottom: dotOff, right: dotOff }} />
-      </Animated.View>
+    <View style={{ position: "relative", height: size * 2 + 40, width: size * 2 + 28 }}>
 
-      {/* Light die — 1, offset right + down */}
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            left: size + 28,
-            top: offset,
-            width: size, height: size, borderRadius: r,
-            backgroundColor: "#efefef",
-          },
-          s2,
-        ]}
+      {/* Dark die — shows 2 */}
+      <HoverDie
+        size={size} dark
+        floatAmount={12} floatDuration={2000}
+        rotateDir={1}
       >
-        <View
-          style={{
-            position: "absolute",
-            width: dot, height: dot, borderRadius: dot / 2,
-            backgroundColor: "#141414",
-            top: (size - dot) / 2, left: (size - dot) / 2,
-          }}
-        />
-      </Animated.View>
+        <View style={{ position: "absolute", width: dot, height: dot, borderRadius: dot / 2, backgroundColor: "#f4f4f4", top: dotO, left: dotO }} />
+        <View style={{ position: "absolute", width: dot, height: dot, borderRadius: dot / 2, backgroundColor: "#f4f4f4", bottom: dotO, right: dotO }} />
+      </HoverDie>
+
+      {/* Light die — shows 1 */}
+      <HoverDie
+        size={size}
+        floatAmount={8} floatDuration={2300} floatDelay={600}
+        rotateDir={-1}
+        outerStyle={{ position: "absolute", left: size + 28, top: offset }}
+      >
+        <View style={{
+          position: "absolute",
+          width: dot, height: dot, borderRadius: dot / 2,
+          backgroundColor: "#141414",
+          top: (size - dot) / 2, left: (size - dot) / 2,
+        }} />
+      </HoverDie>
 
       {/* Label */}
       <View style={{ position: "absolute", bottom: 0, left: 0 }}>
@@ -151,7 +224,6 @@ function TableMockup() {
   ];
   return (
     <View style={{ borderRadius: 18, overflow: "hidden", backgroundColor: C.surface, borderWidth: 1, borderColor: C.border }}>
-      {/* Card header */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14, paddingHorizontal: 22, borderBottomWidth: 1, borderBottomColor: C.borderSoft }}>
         <Text style={{ fontFamily: MONO, fontSize: 14, fontWeight: "700", color: C.fg, letterSpacing: 2 }}>MiA!</Text>
         <View style={{ flexDirection: "row", gap: 16 }}>
@@ -160,20 +232,15 @@ function TableMockup() {
         </View>
       </View>
 
-      {/* Felt oval */}
       <View style={{ margin: 16, borderRadius: 120, backgroundColor: C.feltA, borderWidth: 1, borderColor: C.feltBorder, height: 290, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-        {/* Players */}
         <View style={{ position: "absolute", top: 22, flexDirection: "row", gap: 18 }}>
           {players.map((p) => (
             <View key={p.i} style={{ alignItems: "center", gap: 5 }}>
-              <View
-                style={{
-                  width: 40, height: 40, borderRadius: 20,
-                  backgroundColor: "#2a2e32",
-                  alignItems: "center", justifyContent: "center",
-                  ...(p.active ? { borderWidth: 2, borderColor: C.accent } : {}),
-                }}
-              >
+              <View style={{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: "#2a2e32", alignItems: "center", justifyContent: "center",
+                ...(p.active ? { borderWidth: 2, borderColor: C.accent } : {}),
+              }}>
                 <Text style={{ color: p.active ? "#fff" : "#cfd3d6", fontWeight: "700", fontSize: 13 }}>{p.i}</Text>
               </View>
               <Text style={{ fontFamily: MONO, fontSize: 9, color: p.active ? C.accent : "#9aa0a4" }}>{p.label}</Text>
@@ -181,22 +248,18 @@ function TableMockup() {
           ))}
         </View>
 
-        {/* Declaration */}
         <View style={{ alignItems: "center" }}>
           <Text style={{ fontFamily: MONO, fontSize: 9, letterSpacing: 5, color: "#8a9096", textTransform: "uppercase" }}>Priya claims</Text>
           <Text style={{ fontSize: 52, fontWeight: "700", color: "#f2f4f6", letterSpacing: -2, marginTop: 2 }}>5·4</Text>
         </View>
 
-        {/* Bottom — dice + actions */}
         <View style={{ position: "absolute", bottom: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 22, width: "100%" }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text style={{ fontFamily: MONO, fontSize: 9, letterSpacing: 2, color: C.accent, textTransform: "uppercase" }}>Your roll</Text>
-            {/* Dark die */}
             <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: "#1a1a1a", position: "relative" }}>
               <View style={{ position: "absolute", width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#f4f4f4", top: 7, left: 7 }} />
               <View style={{ position: "absolute", width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#f4f4f4", bottom: 7, right: 7 }} />
             </View>
-            {/* Light die */}
             <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: "#f0f0f0", alignItems: "center", justifyContent: "center" }}>
               <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#141414" }} />
             </View>
@@ -245,19 +308,12 @@ export default function HomeScreen() {
       <SafeAreaView style={{ flex: 1 }}>
 
         {/* ── Nav ── */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: pad,
-            paddingVertical: 18,
-            borderBottomWidth: 1,
-            borderBottomColor: C.borderSoft,
-            backgroundColor: C.bg,
-          }}
-        >
-          {/* Logo + nav links */}
+        <View style={{
+          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+          paddingHorizontal: pad, paddingVertical: 18,
+          borderBottomWidth: 1, borderBottomColor: C.borderSoft,
+          backgroundColor: C.bg,
+        }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 28 }}>
             <Text style={{ fontFamily: MONO, fontSize: 14, fontWeight: "700", color: C.fg, letterSpacing: 2 }}>MiA!</Text>
             {isWide && (
@@ -268,8 +324,6 @@ export default function HomeScreen() {
               </>
             )}
           </View>
-
-          {/* Auth buttons */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <TouchableOpacity onPress={() => router.push("/(auth)/login" as never)}>
               <Text style={{ fontFamily: MONO, fontSize: 13, fontWeight: "500", color: C.fg }}>Log in</Text>
@@ -287,48 +341,31 @@ export default function HomeScreen() {
           <View style={{ maxWidth: maxW, alignSelf: "center", width: "100%" }}>
 
             {/* ── HERO ── */}
-            <View
-              style={{
-                flexDirection: isWide ? "row" : "column",
-                alignItems: isWide ? "center" : "flex-start",
-                paddingHorizontal: pad,
-                paddingTop: isWide ? 96 : 52,
-                paddingBottom: isWide ? 80 : 52,
-                gap: isWide ? 40 : 0,
-              }}
-            >
-              {/* Text */}
+            <View style={{
+              flexDirection: isWide ? "row" : "column",
+              alignItems: isWide ? "center" : "flex-start",
+              paddingHorizontal: pad,
+              paddingTop: isWide ? 96 : 52,
+              paddingBottom: isWide ? 80 : 52,
+              gap: isWide ? 40 : 0,
+            }}>
               <View style={{ flex: isWide ? 1.05 : undefined }}>
                 <Text style={{ fontFamily: MONO, fontSize: 12, letterSpacing: 4, textTransform: "uppercase", color: C.accent }}>
                   The dice bluffing game
                 </Text>
-
-                <Text
-                  style={{
-                    fontWeight: "700",
-                    fontSize: isWide ? 82 : 64,
-                    lineHeight: isWide ? 77 : 60,
-                    letterSpacing: isWide ? -4 : -3,
-                    color: C.fg,
-                    marginTop: 20,
-                  }}
-                >
+                <Text style={{
+                  fontWeight: "700",
+                  fontSize: isWide ? 82 : 64,
+                  lineHeight: isWide ? 77 : 60,
+                  letterSpacing: isWide ? -4 : -3,
+                  color: C.fg, marginTop: 20,
+                }}>
                   {"Roll.\nBluff.\nMiA!"}
                 </Text>
-
-                <Text
-                  style={{
-                    fontSize: 18,
-                    lineHeight: 29,
-                    color: C.fgMuted,
-                    maxWidth: 440,
-                    marginTop: 24,
-                  }}
-                >
+                <Text style={{ fontSize: 18, lineHeight: 29, color: C.fgMuted, maxWidth: 440, marginTop: 24 }}>
                   Two dice, one lie. Announce a higher roll than the last player — or call their bluff. The whole table can smell fear. Can they smell yours?
                 </Text>
 
-                {/* Hero CTAs */}
                 <View style={{ marginTop: 32, gap: 12 }}>
                   <View style={{ flexDirection: "row", gap: 12 }}>
                     <TouchableOpacity
@@ -353,7 +390,7 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              {/* Dice */}
+              {/* Hover dice */}
               <View style={{ flex: isWide ? 0.95 : undefined, alignItems: "center", justifyContent: "center", marginTop: isWide ? 0 : 44, paddingBottom: isWide ? 0 : 8 }}>
                 <HeroDice size={diceSize} />
               </View>
@@ -368,10 +405,9 @@ export default function HomeScreen() {
                 <Text style={{ fontFamily: MONO, fontSize: 12, letterSpacing: 4, textTransform: "uppercase", color: C.accent }}>
                   Three moves, that's it
                 </Text>
-                <Text style={{ fontWeight: "700", fontSize: isWide ? 40 : 28, letterSpacing: -1, color: C.fg, marginTop: 16, marginBottom: 0 }}>
+                <Text style={{ fontWeight: "700", fontSize: isWide ? 40 : 28, letterSpacing: -1, color: C.fg, marginTop: 16 }}>
                   A round of MiA!
                 </Text>
-
                 {isWide ? (
                   <View style={{ flexDirection: "row", gap: 16, marginTop: 40 }}>
                     {STEPS.map((s) => <StepCard key={s.n} {...s} flex />)}
@@ -386,17 +422,13 @@ export default function HomeScreen() {
 
             {/* ── TABLE PREVIEW ── */}
             <View style={{ borderTopWidth: 1, borderTopColor: C.borderSoft }}>
-              <View
-                style={{
-                  paddingHorizontal: pad,
-                  paddingTop: isWide ? 96 : 64,
-                  paddingBottom: isWide ? 96 : 64,
-                  flexDirection: isWide ? "row" : "column",
-                  gap: isWide ? 48 : 36,
-                  alignItems: isWide ? "center" : "flex-start",
-                }}
-              >
-                {/* Text side */}
+              <View style={{
+                paddingHorizontal: pad,
+                paddingTop: isWide ? 96 : 64, paddingBottom: isWide ? 96 : 64,
+                flexDirection: isWide ? "row" : "column",
+                gap: isWide ? 48 : 36,
+                alignItems: isWide ? "center" : "flex-start",
+              }}>
                 <View style={{ flex: isWide ? 0.9 : undefined }}>
                   <Text style={{ fontFamily: MONO, fontSize: 12, letterSpacing: 4, textTransform: "uppercase", color: C.accent }}>
                     Live tables
@@ -414,8 +446,6 @@ export default function HomeScreen() {
                     <Text style={{ fontSize: 15, fontWeight: "600", color: C.onAccent }}>Take a seat</Text>
                   </TouchableOpacity>
                 </View>
-
-                {/* Table mockup */}
                 <View style={{ flex: isWide ? 1.1 : undefined, width: isWide ? undefined : "100%" }}>
                   <TableMockup />
                 </View>
@@ -439,17 +469,11 @@ export default function HomeScreen() {
 
             {/* ── CTA BAND ── */}
             <View style={{ paddingHorizontal: pad, paddingBottom: isWide ? 96 : 64 }}>
-              <View
-                style={{
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: C.border,
-                  backgroundColor: C.feltA,
-                  paddingVertical: 64,
-                  paddingHorizontal: isWide ? 48 : 28,
-                  alignItems: "center",
-                }}
-              >
+              <View style={{
+                borderRadius: 20, borderWidth: 1, borderColor: C.border,
+                backgroundColor: C.feltA, paddingVertical: 64,
+                paddingHorizontal: isWide ? 48 : 28, alignItems: "center",
+              }}>
                 <Text style={{ fontWeight: "700", fontSize: isWide ? 46 : 30, letterSpacing: -1, color: "#f2f4f6", textAlign: "center" }}>
                   The table's waiting.
                 </Text>
@@ -466,19 +490,15 @@ export default function HomeScreen() {
             </View>
 
             {/* ── FOOTER ── */}
-            <View
-              style={{
-                borderTopWidth: 1,
-                borderTopColor: C.border,
-                paddingHorizontal: pad,
-                paddingTop: isWide ? 48 : 32,
-                paddingBottom: isWide ? 56 : 40,
-                flexDirection: isWide ? "row" : "column",
-                alignItems: isWide ? "center" : "flex-start",
-                justifyContent: "space-between",
-                gap: isWide ? 0 : 16,
-              }}
-            >
+            <View style={{
+              borderTopWidth: 1, borderTopColor: C.border,
+              paddingHorizontal: pad,
+              paddingTop: isWide ? 48 : 32, paddingBottom: isWide ? 56 : 40,
+              flexDirection: isWide ? "row" : "column",
+              alignItems: isWide ? "center" : "flex-start",
+              justifyContent: "space-between",
+              gap: isWide ? 0 : 16,
+            }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                 <Text style={{ fontFamily: MONO, fontSize: 14, fontWeight: "700", color: C.fg, letterSpacing: 2 }}>MiA!</Text>
                 <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgFaint }}>© MiA! — 2·1 wins.</Text>
@@ -492,7 +512,6 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-
     </View>
   );
 }

@@ -105,9 +105,9 @@ Game state during an active round is handled via Supabase Realtime broadcast (ep
 |--------|-----------------|
 | `app/` | Screens — every file is a route (Expo Router: filename = URL) |
 | `components/` | Reusable UI pieces shared across multiple screens |
-| `lib/` | Code that talks to Supabase or manages global state (has side effects) |
+| `services/` | Code that talks to Supabase or manages global state (has side effects) |
 | `utils/` | Pure game rule logic — no network calls, no state, fully unit-tested |
 | `supabase/` | The backend: SQL migrations and Deno edge functions |
 | `types/` | TypeScript type definitions shared across the whole codebase |
 
-**`lib/` vs `utils/`** — the key distinction: `lib/` files make network calls or mutate state; `utils/` files are pure functions that just take inputs and return outputs. You can call a `utils/` function without a Supabase connection.
+**`services/` vs `utils/`** — the key distinction: `services/` files make network calls or mutate state; `utils/` files are pure functions that just take inputs and return outputs. You can call a `utils/` function without a Supabase connection.

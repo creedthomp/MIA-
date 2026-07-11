@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Platform,
   useWindowDimensions,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useStore } from "@/services/store";
@@ -31,6 +32,249 @@ const C = {
 };
 const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
 
+type Tab = "play" | "rules" | "leaderboard" | "settings";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "play",        label: "Play" },
+  { id: "rules",       label: "Rules" },
+  { id: "leaderboard", label: "Leaderboard" },
+  { id: "settings",    label: "Settings" },
+];
+
+// ── Tab bar ──────────────────────────────────────────────────────
+function TabBar({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void }) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: "row", paddingVertical: 10 }}
+      style={{ borderBottomWidth: 1, borderBottomColor: C.borderSoft }}
+    >
+      {TABS.map((t) => {
+        const on = active === t.id;
+        return (
+          <TouchableOpacity
+            key={t.id}
+            onPress={() => onSelect(t.id)}
+            style={{
+              paddingVertical: 6, paddingHorizontal: 16, borderRadius: 999,
+              backgroundColor: on ? C.accent : "transparent",
+              borderWidth: 1, borderColor: on ? C.accent : C.border,
+            }}
+          >
+            <Text style={{
+              fontFamily: MONO, fontSize: 12,
+              color: on ? C.onAccent : C.fgMuted,
+              fontWeight: on ? "600" : "400",
+            }}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+// ── Rules tab ────────────────────────────────────────────────────
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={{ marginBottom: 28 }}>
+      <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase", marginBottom: 12 }}>
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
+function RuleRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <View style={{ flexDirection: "row", paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: C.borderSoft }}>
+      <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgFaint, flex: 1 }}>{label}</Text>
+      <Text style={{ fontFamily: MONO, fontSize: 12, color: accent ? C.accent : C.fg, fontWeight: "600", flex: 1, textAlign: "right" }}>{value}</Text>
+    </View>
+  );
+}
+
+function RulesTab() {
+  return (
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 56 }}>
+      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 4, color: C.accent, textTransform: "uppercase", marginBottom: 8 }}>
+        How to play
+      </Text>
+      <Text style={{ fontSize: 26, fontWeight: "700", color: C.fg, letterSpacing: -0.5, marginBottom: 32 }}>
+        The Rules
+      </Text>
+
+      <Section title="Overview">
+        <Text style={{ fontSize: 14, lineHeight: 23, color: C.fgMuted, marginBottom: 14 }}>
+          One player at a time, each roll is a secret, each claim is a gamble — and the only thing the table knows for sure is that someone, eventually, is lying.
+          {"\n\n"}Be the last player remaining. Avoid collecting 5 points. Points are bad.
+        </Text>
+        <RuleRow label="Players" value="2 or more" />
+        <RuleRow label="Equipment" value="2 dice + 1 cup" />
+        <RuleRow label="Turn order" value="Sequential around the table" />
+      </Section>
+
+      <Section title="How it works">
+        <Text style={{ fontSize: 14, lineHeight: 23, color: C.fgMuted, marginBottom: 10 }}>
+          Roll both dice under your cup. Hide the result. State the roll to the table.
+          {"\n\n"}With the current claim, the next player must roll the same number or higher. If your actual roll meets or beats the previous claim, state it honestly. If it doesn't — <Text style={{ color: C.fg, fontStyle: "italic" }}>you must bluff.</Text>
+        </Text>
+      </Section>
+
+      <Section title="Dice ranking — low to high">
+        <RuleRow label="Normal rolls" value="31 through 65" />
+        <RuleRow label="Doubles" value="11, 22, 33, 44, 55, 66" />
+        <RuleRow label="MiA! · 2·1" value="Beats everything" accent />
+      </Section>
+
+      <Section title="Challenging">
+        <Text style={{ fontSize: 14, lineHeight: 23, color: C.fgMuted, marginBottom: 14 }}>
+          Any player may challenge the current roll. The cup is lifted to reveal the truth.
+        </Text>
+        <RuleRow label="Bluff caught" value="Liar +1 point" accent />
+        <RuleRow label="Challenge wrong" value="Challenger +2 points" />
+        <Text style={{ fontSize: 13, lineHeight: 21, color: C.fgFaint, marginTop: 12 }}>
+          The winner of the challenge starts the new round. Board resets — no minimum to beat.
+        </Text>
+      </Section>
+
+      <Section title="MiA! — the special roll">
+        <Text style={{ fontSize: 14, lineHeight: 23, color: C.fgMuted }}>
+          If you roll 2·1, you may immediately declare "Mia!" — no bluffing needed.{"\n\n"}
+          The next player can still roll Mia, creating a chain of escalating tension until someone breaks and calls the lie.
+        </Text>
+      </Section>
+
+      <View style={{ borderRadius: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, padding: 22 }}>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.accent, textTransform: "uppercase", marginBottom: 12 }}>
+          The spirit of the game
+        </Text>
+        <Text style={{ fontSize: 14, lineHeight: 23, color: C.fgMuted, fontStyle: "italic" }}>
+          "MiA! rewards patience, punishes greed, and never forgets a good story. It's the game where the quietest player at the table can walk away with the win."{"\n\n"}
+          THE DICE NEVER LIE.{"\n"}The players, however, are under no such obligation.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ── Leaderboard tab ──────────────────────────────────────────────
+function LeaderboardTab() {
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 4, color: C.fgFaint, textTransform: "uppercase", marginBottom: 14 }}>
+        Coming soon
+      </Text>
+      <Text style={{ fontSize: 24, fontWeight: "700", color: C.fg, letterSpacing: -0.5, textAlign: "center", marginBottom: 12 }}>
+        Leaderboard
+      </Text>
+      <Text style={{ fontSize: 14, color: C.fgMuted, textAlign: "center", lineHeight: 22, maxWidth: 280 }}>
+        Track wins, streaks, and the most brazen bluffers at the table. Coming in a future update.
+      </Text>
+    </View>
+  );
+}
+
+// ── Settings tab ─────────────────────────────────────────────────
+function SettingsTab() {
+  const { user, profile, setProfile } = useStore();
+  const [name, setName] = useState(profile?.display_name ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!user || !name.trim()) return;
+    setSaving(true);
+    setSaveError(null);
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ display_name: name.trim() })
+      .eq("id", user.id)
+      .select()
+      .single();
+    setSaving(false);
+    if (error) { setSaveError("Failed to save. Try again."); return; }
+    if (data) setProfile(data as Parameters<typeof setProfile>[0]);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 56 }}>
+      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 4, color: C.accent, textTransform: "uppercase", marginBottom: 8 }}>
+        Account
+      </Text>
+      <Text style={{ fontSize: 26, fontWeight: "700", color: C.fg, letterSpacing: -0.5, marginBottom: 32 }}>
+        Settings
+      </Text>
+
+      {/* Display name */}
+      <View style={{ marginBottom: 32 }}>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase", marginBottom: 10 }}>
+          Display name
+        </Text>
+        <TextInput
+          style={{
+            backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border,
+            borderRadius: 10, paddingVertical: 13, paddingHorizontal: 16,
+            color: C.fg, fontSize: 15, marginBottom: 10,
+          }}
+          placeholderTextColor={C.fgFaint}
+          value={name}
+          onChangeText={(t) => { setName(t); setSaved(false); setSaveError(null); }}
+        />
+        {saveError && (
+          <Text style={{ fontFamily: MONO, fontSize: 11, color: C.danger, marginBottom: 8 }}>{saveError}</Text>
+        )}
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={saving || !name.trim()}
+          style={{
+            backgroundColor: saved ? "#0f2010" : C.surface,
+            borderWidth: 1,
+            borderColor: saved ? C.success : C.border,
+            borderRadius: 10, paddingVertical: 12, alignItems: "center",
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? (
+            <ActivityIndicator color={C.fgMuted} size="small" />
+          ) : (
+            <Text style={{ fontFamily: MONO, fontSize: 12, color: saved ? C.success : C.fgMuted }}>
+              {saved ? "Saved" : "Save changes"}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Email (read-only) */}
+      <View style={{ marginBottom: 40 }}>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase", marginBottom: 10 }}>
+          Email
+        </Text>
+        <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderSoft, borderRadius: 10, paddingVertical: 13, paddingHorizontal: 16 }}>
+          <Text style={{ color: C.fgFaint, fontSize: 15 }}>{user?.email ?? "—"}</Text>
+        </View>
+      </View>
+
+      {/* Sign out */}
+      <View style={{ borderTopWidth: 1, borderTopColor: C.borderSoft, paddingTop: 28 }}>
+        <TouchableOpacity
+          onPress={() => supabase.auth.signOut()}
+          style={{ borderWidth: 1, borderColor: C.danger, borderRadius: 10, paddingVertical: 13, alignItems: "center" }}
+        >
+          <Text style={{ fontFamily: MONO, fontSize: 12, color: C.danger }}>Sign out</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ── Screen ────────────────────────────────────────────────────────
 export default function PlayScreen() {
   const { profile, user } = useStore();
   const router = useRouter();
@@ -38,6 +282,7 @@ export default function PlayScreen() {
   const isWide = width >= 700;
   const maxW = Math.min(width, 560);
 
+  const [activeTab,        setActiveTab]        = useState<Tab>("play");
   const [loading,          setLoading]          = useState<"create" | "quick" | "join" | null>(null);
   const [homeError,        setHomeError]        = useState<string | null>(null);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
@@ -88,114 +333,92 @@ export default function PlayScreen() {
 
         {/* ── Header ── */}
         <View style={{
-          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+          flexDirection: "row", alignItems: "center",
           paddingHorizontal: 24, paddingTop: 14, paddingBottom: 10,
           borderBottomWidth: 1, borderBottomColor: C.borderSoft,
         }}>
           <Text style={{ fontFamily: MONO, fontSize: 14, fontWeight: "700", color: C.fg, letterSpacing: 2 }}>MiA!</Text>
-          <TouchableOpacity onPress={() => supabase.auth.signOut()}>
-            <Text style={{ fontFamily: MONO, fontSize: 10, color: C.fgFaint, letterSpacing: 2, textTransform: "uppercase" }}>Log out</Text>
-          </TouchableOpacity>
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 16 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.success }} />
+            <Text style={{ fontSize: 13, color: C.fgMuted }}>
+              {profile?.display_name ?? "player"}
+            </Text>
+          </View>
         </View>
 
-        {/* ── Content ── */}
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <View style={{ width: "100%", maxWidth: maxW }}>
+        {/* ── Tab bar ── */}
+        <TabBar active={activeTab} onSelect={(t) => { setActiveTab(t); setHomeError(null); }} />
 
-            {/* Welcome */}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: isWide ? 44 : 36 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.success }} />
-              <Text style={{ fontSize: 16, color: C.fgMuted }}>
-                Good to have you back,{" "}
-                <Text style={{ color: C.fg, fontWeight: "600" }}>{profile?.display_name ?? "player"}</Text>
-                {"."}
-              </Text>
-            </View>
+        {/* ── Play tab ── */}
+        {activeTab === "play" && (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <View style={{ width: "100%", maxWidth: maxW }}>
 
-            {homeError && (
-              <Text style={{ fontFamily: MONO, fontSize: 12, color: C.danger, marginBottom: 16 }}>{homeError}</Text>
-            )}
-
-            {/* Create Game — primary large card */}
-            <TouchableOpacity
-              onPress={handleCreateGame}
-              disabled={!!loading}
-              style={{
-                backgroundColor: C.accent,
-                borderRadius: 14,
-                padding: isWide ? 28 : 22,
-                marginBottom: 12,
-                opacity: loading ? 0.65 : 1,
-              }}
-            >
-              {loading === "create" ? (
-                <ActivityIndicator color={C.onAccent} />
-              ) : (
-                <>
-                  <Text style={{ fontSize: isWide ? 22 : 20, fontWeight: "700", color: C.onAccent }}>Create Game</Text>
-                  <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: 6 }}>
-                    Start a private room and share a code with friends
-                  </Text>
-                </>
+              {homeError && (
+                <Text style={{ fontFamily: MONO, fontSize: 12, color: C.danger, marginBottom: 16 }}>{homeError}</Text>
               )}
-            </TouchableOpacity>
 
-            {/* Quick Match + Join row */}
-            <View style={{ flexDirection: "row", gap: 12 }}>
               <TouchableOpacity
-                onPress={handleQuickMatch}
+                onPress={handleCreateGame}
                 disabled={!!loading}
                 style={{
-                  flex: 1,
-                  backgroundColor: C.surface,
-                  borderWidth: 1,
-                  borderColor: C.border,
-                  borderRadius: 14,
-                  padding: isWide ? 22 : 18,
+                  backgroundColor: C.accent, borderRadius: 14,
+                  padding: isWide ? 28 : 22, marginBottom: 12,
                   opacity: loading ? 0.65 : 1,
                 }}
               >
-                {loading === "quick" ? (
-                  <ActivityIndicator color={C.fg} />
-                ) : (
+                {loading === "create" ? <ActivityIndicator color={C.onAccent} /> : (
                   <>
-                    <Text style={{ fontSize: 17, fontWeight: "600", color: C.fg, marginBottom: 6 }}>Quick Match</Text>
-                    <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Jump into a random open table</Text>
+                    <Text style={{ fontSize: isWide ? 22 : 20, fontWeight: "700", color: C.onAccent }}>Create Game</Text>
+                    <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: 6 }}>
+                      Start a private room and share a code with friends
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => { setHomeError(null); setJoinModalVisible(true); }}
-                disabled={!!loading}
-                style={{
-                  flex: 1,
-                  backgroundColor: C.surface,
-                  borderWidth: 1,
-                  borderColor: C.border,
-                  borderRadius: 14,
-                  padding: isWide ? 22 : 18,
-                  opacity: loading ? 0.65 : 1,
-                }}
-              >
-                <>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <TouchableOpacity
+                  onPress={handleQuickMatch}
+                  disabled={!!loading}
+                  style={{
+                    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+                    borderRadius: 14, padding: isWide ? 22 : 18, opacity: loading ? 0.65 : 1,
+                  }}
+                >
+                  {loading === "quick" ? <ActivityIndicator color={C.fg} /> : (
+                    <>
+                      <Text style={{ fontSize: 17, fontWeight: "600", color: C.fg, marginBottom: 6 }}>Quick Match</Text>
+                      <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Jump into a random open table</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => { setHomeError(null); setJoinModalVisible(true); }}
+                  disabled={!!loading}
+                  style={{
+                    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+                    borderRadius: 14, padding: isWide ? 22 : 18, opacity: loading ? 0.65 : 1,
+                  }}
+                >
                   <Text style={{ fontSize: 17, fontWeight: "600", color: C.fg, marginBottom: 6 }}>Join with Code</Text>
                   <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Enter the 6-character room code</Text>
-                </>
-              </TouchableOpacity>
-            </View>
+                </TouchableOpacity>
+              </View>
 
+            </View>
           </View>
-        </View>
+        )}
+
+        {activeTab === "rules"       && <RulesTab />}
+        {activeTab === "leaderboard" && <LeaderboardTab />}
+        {activeTab === "settings"    && <SettingsTab />}
+
       </SafeAreaView>
 
       {/* ── Join modal ── */}
-      <Modal
-        visible={joinModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeJoinModal}
-      >
+      <Modal visible={joinModalVisible} transparent animationType="fade" onRequestClose={closeJoinModal}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, backgroundColor: "rgba(0,0,0,0.75)" }}>
           <View style={{ width: "100%", maxWidth: 440, backgroundColor: C.surface, borderRadius: 20, padding: 28, borderWidth: 1, borderColor: C.border }}>
             <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.accent, textTransform: "uppercase", marginBottom: 10 }}>

@@ -9,6 +9,7 @@ import {
   Platform,
   useWindowDimensions,
   ScrollView,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "@/services/supabase";
@@ -17,6 +18,7 @@ const C = {
   bg:        "#0a0a0a",
   surface:   "#0f0f0f",
   border:    "#262626",
+  borderSoft:"#1c1c1c",
   fg:        "#fafafa",
   fgMuted:   "#a3a3a3",
   fgFaint:   "#6f6f6f",
@@ -35,27 +37,76 @@ function friendlyError(msg: string): string {
   return msg;
 }
 
-// ── Left brand panel (wide screens only) ──────────────────────
+// ── Left brand panel ──────────────────────────────────────────
 function BrandPanel() {
   return (
     <View style={{ flex: 1, backgroundColor: C.feltA, alignItems: "center", justifyContent: "center", padding: 60 }}>
-      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 5, textTransform: "uppercase", color: C.accent, marginBottom: 44 }}>
-        The dice bluffing game
-      </Text>
 
-      {/* Dice art */}
-      <View style={{ flexDirection: "row", gap: 22, alignItems: "flex-start", marginBottom: 52 }}>
-        <View style={{ width: 110, height: 110, borderRadius: 20, backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#2a2a2a" }}>
-          <View style={{ position: "absolute", width: 18, height: 18, borderRadius: 9, backgroundColor: "#f4f4f4", top: 22, left: 22 }} />
-          <View style={{ position: "absolute", width: 18, height: 18, borderRadius: 9, backgroundColor: "#f4f4f4", bottom: 22, right: 22 }} />
+      {/* Real logo in white badge */}
+      <View style={{
+        backgroundColor: "#ffffff",
+        borderRadius: 20, padding: 18,
+        marginBottom: 44,
+        shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
+      }}>
+        <Image
+          source={require("../../assets/MiA!logo.PNG")}
+          style={{ width: 148, height: 82, resizeMode: "contain" }}
+        />
+      </View>
+
+      {/* Stacked dice art — decorative */}
+      <View style={{ flexDirection: "row", gap: 14, marginBottom: 44, alignItems: "flex-end" }}>
+        {/* Die showing 6 */}
+        <View style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: "#141414", borderWidth: 1, borderColor: "#2a2a2a", justifyContent: "space-between", padding: 9, transform: [{ rotate: "-8deg" }] }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
+            <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
+            <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
+            <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
+          </View>
         </View>
-        <View style={{ width: 110, height: 110, borderRadius: 20, backgroundColor: "#efefef", marginTop: 48, alignItems: "center", justifyContent: "center" }}>
-          <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#141414" }} />
+
+        {/* Die showing 5 */}
+        <View style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: "#141414", borderWidth: 1, borderColor: "#2a2a2a", padding: 10, transform: [{ rotate: "5deg" }] }}>
+          <View style={{ flex: 1, justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#f4f4f4" }} />
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#f4f4f4" }} />
+            </View>
+            <View style={{ alignItems: "center" }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#f4f4f4" }} />
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#f4f4f4" }} />
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#f4f4f4" }} />
+            </View>
+          </View>
+        </View>
+
+        {/* Die showing 1 — white */}
+        <View style={{ width: 80, height: 80, borderRadius: 14, backgroundColor: "#efefef", alignItems: "center", justifyContent: "center", transform: [{ rotate: "-3deg" }] }}>
+          <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: "#141414" }} />
+        </View>
+
+        {/* Die showing 2 — small dark, rotated */}
+        <View style={{ width: 52, height: 52, borderRadius: 9, backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#2a2a2a", transform: [{ rotate: "12deg" }], position: "relative" }}>
+          <View style={{ position: "absolute", width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4", top: 10, left: 10 }} />
+          <View style={{ position: "absolute", width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4", bottom: 10, right: 10 }} />
         </View>
       </View>
 
-      <Text style={{ fontSize: 52, fontWeight: "700", color: "#f2f4f6", letterSpacing: -3, lineHeight: 50, textAlign: "left", alignSelf: "flex-start" }}>
-        {"Roll.\nBluff.\nMiA!"}
+      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 5, textTransform: "uppercase", color: C.accent, marginBottom: 14 }}>
+        The dice bluffing game
+      </Text>
+      <Text style={{ fontSize: 28, fontWeight: "700", color: "#f2f4f6", letterSpacing: -1, textAlign: "center", lineHeight: 34 }}>
+        Roll. Bluff. Win.
       </Text>
     </View>
   );
@@ -154,7 +205,17 @@ export default function LoginScreen() {
     return (
       <View style={{ flex: 1, flexDirection: "row", backgroundColor: C.bg }}>
         <BrandPanel />
+        {/* Form panel with ghost dice decor */}
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 60 }}>
+          {/* Ghost dice — top right */}
+          <View style={{ position: "absolute", top: 36, right: 36, flexDirection: "row", gap: 10, opacity: 0.05 }}>
+            <View style={{ width: 70, height: 70, borderRadius: 12, backgroundColor: C.fg, transform: [{ rotate: "18deg" }] }} />
+            <View style={{ width: 52, height: 52, borderRadius: 9, backgroundColor: C.fg, transform: [{ rotate: "-10deg" }], marginTop: 24 }} />
+          </View>
+          {/* Ghost dice — bottom left */}
+          <View style={{ position: "absolute", bottom: 44, left: 28, opacity: 0.04 }}>
+            <View style={{ width: 88, height: 88, borderRadius: 16, backgroundColor: C.fg, transform: [{ rotate: "-20deg" }] }} />
+          </View>
           <LoginForm />
         </View>
       </View>
@@ -164,7 +225,17 @@ export default function LoginScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 28, paddingVertical: 48 }} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 28, paddingVertical: 48 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Logo badge on mobile */}
+          <View style={{ backgroundColor: "#ffffff", borderRadius: 14, padding: 12, marginBottom: 32 }}>
+            <Image
+              source={require("../../assets/MiA!logo.PNG")}
+              style={{ width: 100, height: 56, resizeMode: "contain" }}
+            />
+          </View>
           <LoginForm compact />
         </ScrollView>
       </KeyboardAvoidingView>
