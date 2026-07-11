@@ -1,29 +1,36 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useColorScheme } from "nativewind";
 
 export default function TabsLayout() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === "dark";
-
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: isDark ? "#16213e" : "#ffffff",
-          borderTopColor: isDark ? "#1a1a2e" : "#e5e7eb",
+          backgroundColor: "#0a0a0a",
+          borderTopColor: "#1c1c1c",
+          borderTopWidth: 1,
         },
-        tabBarActiveTintColor: "#e94560",
-        tabBarInactiveTintColor: isDark ? "#a0a0b0" : "#9ca3af",
+        tabBarActiveTintColor: "#4d7cff",
+        tabBarInactiveTintColor: "#6f6f6f",
       }}
     >
+      {/* Landing — hide from tab bar entirely */}
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          tabBarStyle: { display: "none" },
+          tabBarButton: () => null,
+        }}
+      />
+
+      {/* Logged-in hub */}
+      <Tabs.Screen
+        name="play"
+        options={{
+          title: "Play",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons name="dice" size={size} color={color} />
           ),
         }}
       />

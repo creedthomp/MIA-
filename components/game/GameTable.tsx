@@ -11,7 +11,7 @@ import Animated, {
 import { SoloCup } from "./SoloCup";
 import { formatDeclaration } from "@/utils/declarations";
 import type { Player, Declaration, Roll } from "@/types/game";
-import type { GamePhase } from "@/lib/store/gameSlice";
+import type { GamePhase } from "@/services/store/gameSlice";
 
 // ---------- Speech bubble ----------
 

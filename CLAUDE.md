@@ -10,7 +10,6 @@ A real-time multiplayer dice game (web + mobile) for 2–8 players. Players roll
 - **Expo Router** (v3) — File-based navigation across all platforms
 - **Supabase** — Backend: PostgreSQL database, auth, realtime multiplayer channels, edge functions
 - **TypeScript** — End-to-end type safety, strict mode
-- **NativeWind** (v4) — Tailwind CSS adapted for React Native
 - **Zustand** — Lightweight client-side state management
 
 ---
@@ -21,22 +20,30 @@ A real-time multiplayer dice game (web + mobile) for 2–8 players. Players roll
 mia/
 ├── app/                    # Expo Router screens (file = route)
 │   ├── (tabs)/
-│   │   └── index.tsx       # Home / lobby
+│   │   ├── index.tsx       # Landing page (logged-out)
+│   │   └── play.tsx        # Hub / home (logged-in)
+│   ├── (auth)/
+│   │   ├── login.tsx
+│   │   └── signup.tsx
+│   ├── lobby/
+│   │   └── [roomId].tsx    # Pre-game waiting room
 │   ├── game/
 │   │   └── [roomId].tsx    # Active game room
 │   └── _layout.tsx         # Root layout + auth guard
 ├── components/             # Reusable UI components
-├── lib/
+├── services/
 │   ├── supabase.ts         # Supabase client singleton
-│   └── store.ts            # Zustand global store
+│   ├── store.ts            # Zustand global store
+│   ├── roomService.ts      # Room create/join logic
+│   ├── gameChannel.ts      # Realtime channel helpers
+│   └── authService.ts      # Profile fetch
 ├── types/                  # Shared TypeScript types
-├── utils/                  # Game logic (dice scoring, validation)
+├── utils/                  # Game logic (dice scoring, validation) — pure functions, no network
 ├── assets/                 # Images, fonts, sounds
 ├── supabase/
 │   ├── migrations/         # SQL schema migrations
 │   └── functions/          # Deno edge functions (server-side game logic)
-├── app.json                # Expo config
-└── tailwind.config.js
+└── app.json                # Expo config
 ```
 
 ---
@@ -111,7 +118,8 @@ DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" SUPABASE_ACCESS_TOKEN=loc
 ## Code Style & Conventions
 
 - TypeScript strict mode — no `any`
-- NativeWind utility classes for all styling — no inline `style` objects
+- Inline `style` objects with a `C` design token constant at the top of each file — no `className` props
+- `const MONO = Platform.OS === "ios" ? "Courier New" : "monospace"` for monospace font
 - One component per file, named exports
 - Zustand slices per domain: `game`, `auth`, `ui`
 - Supabase types generated via CLI and committed — never manually maintained
@@ -126,8 +134,7 @@ Full game rules, database schema notes, and tech stack deep-dives live in notes.
 
 ## Agent Instructions
 
-- Always ask clarifying questions before starting a complex task
-- Show plan and steps before executing
+- Proceed with your best judgment; only ask when genuinely blocked on a decision that cannot be inferred
 - Keep reports and summaries concise — bullet points over paragraphs
 - Cite sources when doing research
 - Prefer up-to-date technology and modern patterns

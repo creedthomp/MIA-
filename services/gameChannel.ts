@@ -1,5 +1,5 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/services/supabase";
 import type { RealtimeEvent } from "@/types/realtimeEvents";
 
 let activeChannel: RealtimeChannel | null = null;

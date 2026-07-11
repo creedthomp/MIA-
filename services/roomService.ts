@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/services/supabase";
 import { generateRoomCode } from "@/utils/roomCode";
 
 export type RoomType = "private" | "quickmatch";

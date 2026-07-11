@@ -1,12 +1,10 @@
-import "../global.css";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { supabase } from "@/lib/supabase";
-import { useStore } from "@/lib/store";
-import { fetchProfile } from "@/lib/authService";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { supabase } from "@/services/supabase";
+import { useStore } from "@/services/store";
+import { fetchProfile } from "@/services/authService";
 
 function AuthGuard() {
   const router = useRouter();
@@ -16,18 +14,13 @@ function AuthGuard() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
-      }
+      if (session?.user) fetchProfile(session.user.id).then(setProfile);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
-      } else {
-        setProfile(null);
-      }
+      if (session?.user) fetchProfile(session.user.id).then(setProfile);
+      else setProfile(null);
     });
 
     return () => subscription.unsubscribe();
@@ -35,13 +28,16 @@ function AuthGuard() {
 
   useEffect(() => {
     if (isAuthLoading) return;
+    const inAuth    = segments[0] === "(auth)";
+    const onLanding = segments[0] === "(tabs)" && !segments[1];
+    const onHub     = segments[0] === "(tabs)" && segments[1] === "play";
+    const onLobby   = segments[0] === "lobby";
+    const onGame    = segments[0] === "game";
 
-    const inAuthGroup = segments[0] === "(auth)";
-
-    if (!user && !inAuthGroup) {
-      router.replace("/(auth)/login");
-    } else if (user && inAuthGroup) {
-      router.replace("/(tabs)");
+    if (!user) {
+      if (onHub || onLobby || onGame) router.replace("/(tabs)");
+    } else {
+      if (inAuth || onLanding) router.replace("/(tabs)/play");
     }
   }, [user, isAuthLoading, segments]);
 
@@ -52,9 +48,8 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthGuard />
-      <View className="flex-1">
+      <View style={{ flex: 1 }}>
         <Slot />
-        <ThemeToggle />
       </View>
     </SafeAreaProvider>
   );

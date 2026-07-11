@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase";
-import { broadcastGameEvent } from "@/lib/gameChannel";
+import { supabase } from "@/services/supabase";
+import { broadcastGameEvent } from "@/services/gameChannel";
 import type { Player } from "@/types/game";
 
 export async function initGameTurn(roomId: string, players: Player[]): Promise<void> {

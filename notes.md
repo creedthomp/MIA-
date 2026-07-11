@@ -59,8 +59,8 @@ For Mia specifically: game rooms are Realtime broadcast channels, player state i
 ### TypeScript
 A statically-typed superset of JavaScript. Catches type mismatches at compile time rather than runtime. In a multiplayer game where game state is passed between client, server, and database, TypeScript prevents entire categories of bugs (wrong field name, missing property, wrong value type). Supabase can generate TypeScript types directly from your database schema via CLI, so your DB types and app types stay in sync automatically.
 
-### NativeWind (v4)
-Brings Tailwind CSS to React Native. Normally React Native uses its own `StyleSheet` API with JavaScript objects — you can't use CSS class strings. NativeWind compiles Tailwind utility classes at build time into React Native-compatible styles. This means you write `className="flex-1 bg-gray-900 text-white"` on any component and it works on both native and web. v4 is a near-complete rewrite that aligns more closely with Tailwind v3 and the React Native New Architecture.
+### Styling (inline styles + design tokens)
+All screens use React Native's built-in `style` prop with plain JavaScript objects. A `C` constant at the top of each file holds the full design token set (colors, etc.), and a `MONO` constant provides the monospace font string. This approach works identically on iOS, Android, and web with no build-time processing, and avoids the web-compatibility bugs that NativeWind v4 introduced. NativeWind and Tailwind have been removed from the project.
 
 ### Zustand
 A minimal state management library for React. Unlike Redux, there's no boilerplate — you define a store as a plain object with actions, and components subscribe to only the slices they need. For Mia, Zustand holds transient UI state (current player's view, pending declarations, animation state) while Supabase holds the authoritative game state. The two are kept in sync via Supabase Realtime subscriptions that write into the Zustand store.
@@ -96,3 +96,18 @@ game_events
 ```
 
 Game state during an active round is handled via Supabase Realtime broadcast (ephemeral, not stored). Only significant events (life changes, game over) are persisted to `game_events`.
+
+---
+
+## Folder Guide
+
+| Folder | What lives here |
+|--------|-----------------|
+| `app/` | Screens — every file is a route (Expo Router: filename = URL) |
+| `components/` | Reusable UI pieces shared across multiple screens |
+| `lib/` | Code that talks to Supabase or manages global state (has side effects) |
+| `utils/` | Pure game rule logic — no network calls, no state, fully unit-tested |
+| `supabase/` | The backend: SQL migrations and Deno edge functions |
+| `types/` | TypeScript type definitions shared across the whole codebase |
+
+**`lib/` vs `utils/`** — the key distinction: `lib/` files make network calls or mutate state; `utils/` files are pure functions that just take inputs and return outputs. You can call a `utils/` function without a Supabase connection.

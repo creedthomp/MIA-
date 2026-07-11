@@ -1,4 +1,4 @@
-import type { RoomType } from "@/lib/roomService";
+import type { RoomType } from "@/services/roomService";
 
 export interface LobbySlice {
   currentRoomId: string | null;

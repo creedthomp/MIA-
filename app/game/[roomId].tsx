@@ -8,10 +8,10 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "@/lib/supabase";
-import { useStore } from "@/lib/store";
-import { subscribeToGame, unsubscribeFromGame, broadcastGameEvent } from "@/lib/gameChannel";
-import { initGameTurn } from "@/lib/gameService";
+import { supabase } from "@/services/supabase";
+import { useStore } from "@/services/store";
+import { subscribeToGame, unsubscribeFromGame, broadcastGameEvent } from "@/services/gameChannel";
+import { initGameTurn } from "@/services/gameService";
 import { formatDeclaration } from "@/utils/declarations";
 import { getRank } from "@/utils/rollHierarchy";
 import { nextActivePlayer } from "@/utils/turnOrder";
