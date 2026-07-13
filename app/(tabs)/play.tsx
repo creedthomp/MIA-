@@ -44,12 +44,11 @@ const TABS: { id: Tab; label: string }[] = [
 // ── Tab bar ──────────────────────────────────────────────────────
 function TabBar({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: "row", paddingVertical: 10 }}
-      style={{ borderBottomWidth: 1, borderBottomColor: C.borderSoft }}
-    >
+    <View style={{
+      flexDirection: "row", flexShrink: 0,
+      paddingHorizontal: 16, paddingVertical: 10, gap: 6,
+      borderBottomWidth: 1, borderBottomColor: C.borderSoft,
+    }}>
       {TABS.map((t) => {
         const on = active === t.id;
         return (
@@ -57,7 +56,7 @@ function TabBar({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void 
             key={t.id}
             onPress={() => onSelect(t.id)}
             style={{
-              paddingVertical: 6, paddingHorizontal: 16, borderRadius: 999,
+              paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999,
               backgroundColor: on ? C.accent : "transparent",
               borderWidth: 1, borderColor: on ? C.accent : C.border,
             }}
@@ -72,7 +71,7 @@ function TabBar({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void 
           </TouchableOpacity>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 
