@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
@@ -70,11 +71,9 @@ function HoverDie({
     yIdle.value = withDelay(
       floatDelay,
       withRepeat(
-        withSequence(
-          withTiming(-floatAmount, { duration: floatDuration, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0,            { duration: floatDuration, easing: Easing.inOut(Easing.ease) }),
-        ),
+        withTiming(-floatAmount, { duration: floatDuration, easing: Easing.inOut(Easing.sin) }),
         -1,
+        true, // reverse: auto-reverses so the curve is always smooth at both ends
       ),
     );
   }, [floatAmount, floatDuration, floatDelay]);
@@ -161,7 +160,7 @@ function HeroDice({ size }: { size: number }) {
       {/* Dark die — shows 2 */}
       <HoverDie
         size={size} dark
-        floatAmount={12} floatDuration={2000}
+        floatAmount={10} floatDuration={3800}
         rotateDir={1}
       >
         <View style={{ position: "absolute", width: dot, height: dot, borderRadius: dot / 2, backgroundColor: "#f4f4f4", top: dotO, left: dotO }} />
@@ -171,7 +170,7 @@ function HeroDice({ size }: { size: number }) {
       {/* Light die — shows 1 */}
       <HoverDie
         size={size}
-        floatAmount={8} floatDuration={2300} floatDelay={600}
+        floatAmount={7} floatDuration={4400} floatDelay={1000}
         rotateDir={-1}
         outerStyle={{ position: "absolute", left: size + 28, top: offset }}
       >
@@ -315,7 +314,9 @@ export default function HomeScreen() {
           backgroundColor: C.bg,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 28 }}>
-            <Text style={{ fontFamily: MONO, fontSize: 14, fontWeight: "700", color: C.fg, letterSpacing: 2 }}>MiA!</Text>
+            <View style={{ backgroundColor: "#fff", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4 }}>
+              <Image source={require("../../assets/mia-logo.png")} style={{ width: 52, height: 29, resizeMode: "contain" }} />
+            </View>
             {isWide && (
               <>
                 <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted }}>Play</Text>
@@ -350,6 +351,9 @@ export default function HomeScreen() {
               gap: isWide ? 40 : 0,
             }}>
               <View style={{ flex: isWide ? 1.05 : undefined }}>
+                <View style={{ backgroundColor: "#fff", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7, alignSelf: "flex-start", marginBottom: 24 }}>
+                  <Image source={require("../../assets/mia-logo.png")} style={{ width: 88, height: 49, resizeMode: "contain" }} />
+                </View>
                 <Text style={{ fontFamily: MONO, fontSize: 12, letterSpacing: 4, textTransform: "uppercase", color: C.accent }}>
                   The dice bluffing game
                 </Text>
@@ -500,7 +504,9 @@ export default function HomeScreen() {
               gap: isWide ? 0 : 16,
             }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                <Text style={{ fontFamily: MONO, fontSize: 14, fontWeight: "700", color: C.fg, letterSpacing: 2 }}>MiA!</Text>
+                <View style={{ backgroundColor: "#fff", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 3 }}>
+                  <Image source={require("../../assets/mia-logo.png")} style={{ width: 40, height: 22, resizeMode: "contain" }} />
+                </View>
                 <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgFaint }}>© MiA! — 2·1 wins.</Text>
               </View>
               <View style={{ flexDirection: "row", gap: 22 }}>

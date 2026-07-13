@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   Modal,
   TextInput,
@@ -336,7 +337,9 @@ export default function PlayScreen() {
           paddingHorizontal: 24, paddingTop: 14, paddingBottom: 10,
           borderBottomWidth: 1, borderBottomColor: C.borderSoft,
         }}>
-          <Text style={{ fontFamily: MONO, fontSize: 14, fontWeight: "700", color: C.fg, letterSpacing: 2 }}>MiA!</Text>
+          <View style={{ backgroundColor: "#fff", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4 }}>
+            <Image source={require("../../assets/mia-logo.png")} style={{ width: 52, height: 29, resizeMode: "contain" }} />
+          </View>
           <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 16 }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.success }} />
             <Text style={{ fontSize: 13, color: C.fgMuted }}>
