@@ -50,7 +50,7 @@ function BrandPanel() {
         shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
       }}>
         <Image
-          source={require("../../assets/MiA!logo.PNG")}
+          source={require("../../assets/mia-logo.PNG")}
           style={{ width: 148, height: 82, resizeMode: "contain" }}
         />
       </View>
@@ -232,7 +232,7 @@ export default function LoginScreen() {
           {/* Logo badge on mobile */}
           <View style={{ backgroundColor: "#ffffff", borderRadius: 14, padding: 12, marginBottom: 32 }}>
             <Image
-              source={require("../../assets/MiA!logo.PNG")}
+              source={require("../../assets/mia-logo.PNG")}
               style={{ width: 100, height: 56, resizeMode: "contain" }}
             />
           </View>
