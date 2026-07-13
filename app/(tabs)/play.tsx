@@ -343,6 +343,9 @@ export default function PlayScreen() {
               {profile?.display_name ?? "player"}
             </Text>
           </View>
+          <TouchableOpacity onPress={() => supabase.auth.signOut()}>
+            <Text style={{ fontFamily: MONO, fontSize: 10, color: C.fgFaint, letterSpacing: 2, textTransform: "uppercase" }}>Sign out</Text>
+          </TouchableOpacity>
         </View>
 
         {/* ── Tab bar ── */}
