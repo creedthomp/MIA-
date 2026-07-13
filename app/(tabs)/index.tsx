@@ -61,22 +61,33 @@ function HoverDie({
   rotateDir = 1, outerStyle, children,
 }: HoverDieProps) {
   const r = Math.round(size * 0.173);
-  const yIdle   = useSharedValue(0);
-  const yBounce = useSharedValue(0);
-  const scaleV  = useSharedValue(1);
-  const rotateV = useSharedValue(0);
-  const isPlaying = useRef(false);
+  const yIdle      = useSharedValue(0);
+  const yBounce    = useSharedValue(0);
+  const rotateIdle = useSharedValue(0);
+  const rotateHover = useSharedValue(0);
+  const scaleV     = useSharedValue(1);
+  const isPlaying  = useRef(false);
 
   const startIdle = useCallback(() => {
+    // Gentle vertical float — 2s full cycle
     yIdle.value = withDelay(
       floatDelay,
       withRepeat(
         withTiming(-floatAmount, { duration: floatDuration, easing: Easing.inOut(Easing.sin) }),
         -1,
-        true, // reverse: auto-reverses so the curve is always smooth at both ends
+        true,
       ),
     );
-  }, [floatAmount, floatDuration, floatDelay]);
+    // Slow idle rock — ±2° on a ~6s full cycle, offset slightly from the float
+    rotateIdle.value = withDelay(
+      floatDelay + 300,
+      withRepeat(
+        withTiming(2 * rotateDir, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+        -1,
+        true,
+      ),
+    );
+  }, [floatAmount, floatDuration, floatDelay, rotateDir]);
 
   useEffect(() => { startIdle(); }, [startIdle]);
 
@@ -89,11 +100,12 @@ function HoverDie({
     if (isPlaying.current) return;
     isPlaying.current = true;
 
-    // Stop idle float cleanly
     cancelAnimation(yIdle);
+    cancelAnimation(rotateIdle);
     yIdle.value = withTiming(0, { duration: 60 });
+    rotateIdle.value = withTiming(0, { duration: 60 });
 
-    // Rise → wobble → settle  (yBounce drives the callback)
+    // Rise → wobble → settle
     yBounce.value = withSequence(
       withTiming(-28, { duration: 110 }),
       withTiming(-14, { duration: 70 }),
@@ -105,7 +117,7 @@ function HoverDie({
     );
 
     // Tilt shake
-    rotateV.value = withSequence(
+    rotateHover.value = withSequence(
       withTiming(13 * rotateDir,  { duration: 90 }),
       withTiming(-10 * rotateDir, { duration: 110 }),
       withTiming(5 * rotateDir,   { duration: 80 }),
@@ -125,7 +137,7 @@ function HoverDie({
     transform: [
       { translateY: yIdle.value + yBounce.value },
       { scale: scaleV.value },
-      { rotate: `${rotateV.value}deg` },
+      { rotate: `${rotateIdle.value + rotateHover.value}deg` },
     ],
   }));
 
@@ -160,7 +172,7 @@ function HeroDice({ size }: { size: number }) {
       {/* Dark die — shows 2 */}
       <HoverDie
         size={size} dark
-        floatAmount={6} floatDuration={7600}
+        floatAmount={5} floatDuration={1000}
         rotateDir={1}
       >
         <View style={{ position: "absolute", width: dot, height: dot, borderRadius: dot / 2, backgroundColor: "#f4f4f4", top: dotO, left: dotO }} />
@@ -170,7 +182,7 @@ function HeroDice({ size }: { size: number }) {
       {/* Light die — shows 1 */}
       <HoverDie
         size={size}
-        floatAmount={5} floatDuration={8800} floatDelay={1200}
+        floatAmount={4} floatDuration={1300} floatDelay={400}
         rotateDir={-1}
         outerStyle={{ position: "absolute", left: size + 28, top: offset }}
       >
