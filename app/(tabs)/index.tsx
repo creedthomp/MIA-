@@ -160,7 +160,7 @@ function HeroDice({ size }: { size: number }) {
       {/* Dark die — shows 2 */}
       <HoverDie
         size={size} dark
-        floatAmount={10} floatDuration={3800}
+        floatAmount={6} floatDuration={7600}
         rotateDir={1}
       >
         <View style={{ position: "absolute", width: dot, height: dot, borderRadius: dot / 2, backgroundColor: "#f4f4f4", top: dotO, left: dotO }} />
@@ -170,7 +170,7 @@ function HeroDice({ size }: { size: number }) {
       {/* Light die — shows 1 */}
       <HoverDie
         size={size}
-        floatAmount={7} floatDuration={4400} floatDelay={1000}
+        floatAmount={5} floatDuration={8800} floatDelay={1200}
         rotateDir={-1}
         outerStyle={{ position: "absolute", left: size + 28, top: offset }}
       >
