@@ -109,7 +109,7 @@ function RulesTab() {
       <Section title="Overview">
         <Text style={{ fontSize: 14, lineHeight: 23, color: C.fgMuted, marginBottom: 14 }}>
           One player at a time, each roll is a secret, each claim is a gamble — and the only thing the table knows for sure is that someone, eventually, is lying.
-          {"\n\n"}Be the last player remaining. Avoid collecting 5 points. Points are bad.
+          {"\n\n"}Each player starts with 5 lives. Lose all your lives and you're out. Last one standing wins.
         </Text>
         <RuleRow label="Players" value="2 or more" />
         <RuleRow label="Equipment" value="2 dice + 1 cup" />
@@ -133,8 +133,8 @@ function RulesTab() {
         <Text style={{ fontSize: 14, lineHeight: 23, color: C.fgMuted, marginBottom: 14 }}>
           Any player may challenge the current roll. The cup is lifted to reveal the truth.
         </Text>
-        <RuleRow label="Bluff caught" value="Liar +1 point" accent />
-        <RuleRow label="Challenge wrong" value="Challenger +2 points" />
+        <RuleRow label="Bluff caught" value="Liar loses 1 life" accent />
+        <RuleRow label="Challenge wrong" value="Challenger loses 2 lives" />
         <Text style={{ fontSize: 13, lineHeight: 21, color: C.fgFaint, marginTop: 12 }}>
           The winner of the challenge starts the new round. Board resets — no minimum to beat.
         </Text>
