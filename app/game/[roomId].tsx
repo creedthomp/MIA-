@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,16 +14,40 @@ import { supabase } from "@/services/supabase";
 import { useStore } from "@/services/store";
 import { subscribeToGame, unsubscribeFromGame, broadcastGameEvent } from "@/services/gameChannel";
 import { initGameTurn } from "@/services/gameService";
+import { playEmotePop, unloadSounds } from "@/services/sounds";
 import { formatDeclaration } from "@/utils/declarations";
 import { getRank } from "@/utils/rollHierarchy";
 import { nextActivePlayer } from "@/utils/turnOrder";
 import { DiceFace } from "@/components/game/DiceFace";
 import { DeclarationInput } from "@/components/game/DeclarationInput";
 import { GameTable } from "@/components/game/GameTable";
+import { EmotePicker } from "@/components/game/EmotePicker";
 import type { Player, Declaration, DieValue, Roll } from "@/types/game";
+import type { ChallengeResolvedPayload, EmoteId } from "@/types/realtimeEvents";
 
-// ---------- Sub-components ----------
+const C = {
+  bg:        "#0a0a0a",
+  surface:   "#0f0f0f",
+  card:      "#101010",
+  border:    "#262626",
+  fg:        "#fafafa",
+  fgMuted:   "#a3a3a3",
+  fgFaint:   "#6f6f6f",
+  accent:    "#4d7cff",
+  onAccent:  "#ffffff",
+  danger:    "#f0553b",
+  warn:      "#f5a623",
+  ok:        "#4ade80",
+};
+const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
 
+// How long the table reveal plays before the verdict card appears
+const VERDICT_DELAY_MS = 2600;
+
+// How long an emote bubble stays on screen (bubble self-fades just before this)
+const EMOTE_VISIBLE_MS = 2450;
+
+// Edge function response shape (superset of the broadcast payload)
 interface ChallengeResult {
   wasHonest: boolean;
   loserUserId: string;
@@ -33,106 +59,92 @@ interface ChallengeResult {
   winnerUserId: string | null;
 }
 
-function ChallengeOverlay({
-  result,
+// ---------- Verdict modal ----------
+
+function VerdictModal({
+  data,
   players,
   onDismiss,
 }: {
-  result: ChallengeResult;
+  data: ChallengeResolvedPayload;
   players: Player[];
   onDismiss: () => void;
 }) {
-  const loser = players.find((p) => p.userId === result.loserUserId);
-  const actual = result.revealedRoll[0] * 10 + result.revealedRoll[1];
-  const honest = result.wasHonest;
+  const loser = players.find((p) => p.userId === data.loserUserId);
+  const challenger = players.find((p) => p.userId === data.challengerUserId);
+  const actual = data.revealedRoll[0] * 10 + data.revealedRoll[1];
+  const honest = data.wasHonest;
 
   return (
     <View
       style={{
         position: "absolute",
         top: 0, bottom: 0, left: 0, right: 0,
-        backgroundColor: "rgba(0,0,0,0.88)",
+        backgroundColor: "rgba(0,0,0,0.85)",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 200,
+        paddingHorizontal: 24,
       }}
     >
       <View
         style={{
-          backgroundColor: "#111827",
-          borderRadius: 24,
+          backgroundColor: C.card,
+          borderRadius: 20,
           padding: 28,
-          width: "85%",
+          width: "100%",
+          maxWidth: 380,
           alignItems: "center",
           borderWidth: 1,
-          borderColor: honest ? "#16a34a" : "#e94560",
+          borderColor: C.border,
         }}
       >
-        {/* X dismiss button */}
-        <TouchableOpacity
-          onPress={onDismiss}
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 14,
-            width: 28,
-            height: 28,
-            borderRadius: 14,
-            backgroundColor: "#1e2a40",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text style={{ color: "#9ca3af", fontSize: 14, fontWeight: "700" }}>✕</Text>
-        </TouchableOpacity>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.fgFaint, textTransform: "uppercase", marginBottom: 10 }}>
+          The verdict
+        </Text>
 
-        <Text style={{ fontSize: 44, marginBottom: 6 }}>
-          {honest ? "✅" : "🤥"}
+        <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1, color: honest ? C.ok : C.danger, marginBottom: 12 }}>
+          {honest ? "TRUTH." : "LIE."}
         </Text>
-        <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800", marginBottom: 4 }}>
-          {honest ? "Honest!" : "Caught lying!"}
+
+        <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, marginBottom: 18, textAlign: "center" }}>
+          {challenger?.displayName ?? "Someone"} pulled it.{"\n"}
+          Called {formatDeclaration(data.declared)} — rolled {formatDeclaration(actual)}.
         </Text>
-        <Text style={{ color: "#9ca3af", fontSize: 12, marginBottom: 20, textAlign: "center" }}>
-          Declared: {formatDeclaration(result.declared)} · Actual: {formatDeclaration(actual)}
-        </Text>
-        <View style={{ flexDirection: "row", gap: 14, marginBottom: 20 }}>
-          <DiceFace value={result.revealedRoll[0] as DieValue} size={76} dark />
-          <DiceFace value={result.revealedRoll[1] as DieValue} size={76} dark />
+
+        <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
+          <DiceFace value={data.revealedRoll[0] as DieValue} size={68} />
+          <DiceFace value={data.revealedRoll[1] as DieValue} size={68} />
         </View>
+
         <View
           style={{
-            backgroundColor: honest ? "rgba(22,163,74,0.15)" : "rgba(233,69,96,0.15)",
-            borderRadius: 12,
+            backgroundColor: honest ? "rgba(74,222,128,0.09)" : "rgba(240,85,59,0.09)",
+            borderWidth: 1,
+            borderColor: honest ? "rgba(74,222,128,0.35)" : "rgba(240,85,59,0.35)",
+            borderRadius: 10,
             paddingHorizontal: 16,
-            paddingVertical: 8,
-            marginBottom: 20,
+            paddingVertical: 9,
+            marginBottom: 22,
           }}
         >
-          <Text
-            style={{
-              color: honest ? "#4ade80" : "#e94560",
-              fontWeight: "700",
-              fontSize: 14,
-              textAlign: "center",
-            }}
-          >
-            {loser?.displayName ?? "Someone"} loses {result.livesLost}{" "}
-            {result.livesLost === 1 ? "life" : "lives"}
-            {result.isEliminated ? " — eliminated!" : ""}
+          <Text style={{ fontFamily: MONO, color: honest ? C.ok : C.danger, fontWeight: "700", fontSize: 13, textAlign: "center" }}>
+            {loser?.displayName ?? "Someone"} loses {data.livesLost}{" "}
+            {data.livesLost === 1 ? "life" : "lives"}
+            {data.isEliminated ? " — eliminated" : ""}
           </Text>
         </View>
+
         <TouchableOpacity
           onPress={onDismiss}
           style={{
-            backgroundColor: honest ? "#16a34a" : "#e94560",
-            borderRadius: 14,
-            paddingVertical: 11,
-            paddingHorizontal: 36,
+            backgroundColor: C.accent,
+            borderRadius: 10,
+            paddingVertical: 12,
+            paddingHorizontal: 44,
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
-            Continue
-          </Text>
+          <Text style={{ color: C.onAccent, fontWeight: "600", fontSize: 15 }}>Continue</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -163,16 +175,19 @@ export default function GameScreen() {
   const [loading, setLoading] = useState(true);
   const [isRolling, setIsRolling] = useState(false);
   const [peeking, setPeeking] = useState(false);
-  const [showChallengeResult, setShowChallengeResult] = useState(false);
-  const [challengeResult, setChallengeResult] = useState<ChallengeResult | null>(null);
+  const [revealData, setRevealData] = useState<ChallengeResolvedPayload | null>(null);
+  const [showVerdict, setShowVerdict] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [flashUserId, setFlashUserId] = useState<string | null>(null);
   const [connected, setConnected] = useState(true);
+  const [challengerName, setChallengerName] = useState<string | null>(null);
   const [roundKey, setRoundKey] = useState(0); // bumped each round to reset DeclarationInput
+  const [activeEmotes, setActiveEmotes] = useState<Record<string, { emote: EmoteId; key: number }>>({});
 
-  const isChallengerRef = useRef(false);
   const startingRef = useRef(false);
-  const nextRoundStarterRef = useRef<string | null>(null);
+  const verdictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const emoteTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const emoteKeyRef = useRef(0);
 
   const myPlayer = gamePlayers.find((p) => p.userId === user?.id);
   const currentPlayer = gamePlayers.find((p) => p.userId === currentTurnUserId);
@@ -261,50 +276,88 @@ export default function GameScreen() {
     setup();
 
     return () => {
+      if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
+      for (const t of Object.values(emoteTimersRef.current)) clearTimeout(t);
+      unloadSounds();
       unsubscribeFromGame();
       resetGame();
     };
   }, [roomId, user?.id]);
 
-  // Reset per-round state on new round
+  // React to broadcast events that drive per-round presentation
   useEffect(() => {
-    if (lastEvent?.type === "ROUND_STARTED") {
-      setPeeking(false);
-      setActionError(null);
-      setRoundKey((k) => k + 1);
-    }
-  }, [lastEvent]);
+    if (!lastEvent) return;
 
-  // Show challenge result overlay for non-challenger clients
-  useEffect(() => {
-    if (lastEvent?.type === "CHALLENGE_RESOLVED" && !isChallengerRef.current) {
-      const p = lastEvent.payload;
-      setChallengeResult({
-        wasHonest: p.wasHonest,
-        loserUserId: p.loserUserId,
-        livesLost: p.livesLost,
-        newLives: 0, // we don't have this here; updated via LIFE_LOST
-        isEliminated: false,
-        revealedRoll: p.revealedRoll as unknown as Roll,
-        declared: p.declared,
-        winnerUserId: null,
-      });
-      setShowChallengeResult(true);
-    }
-  }, [lastEvent]);
+    switch (lastEvent.type) {
+      case "ROUND_STARTED": {
+        if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
+        setPeeking(false);
+        setActionError(null);
+        setRevealData(null);
+        setShowVerdict(false);
+        setChallengerName(null);
+        setRoundKey((k) => k + 1);
+        break;
+      }
 
-  // Flash the seat of whoever just lost a life
-  useEffect(() => {
-    if (lastEvent?.type === "LIFE_LOST") {
-      const userId = lastEvent.payload?.userId as string | undefined;
-      if (userId) {
-        setFlashUserId(userId);
-        setTimeout(() => setFlashUserId(null), 800);
+      case "CHALLENGE": {
+        const c = gamePlayers.find((p) => p.userId === lastEvent.payload.challengerUserId);
+        setChallengerName(c?.displayName ?? null);
+        break;
+      }
+
+      case "CHALLENGE_CANCELLED": {
+        setChallengerName(null);
+        break;
+      }
+
+      // Everyone (challenger included — broadcasts echo to self) watches the same
+      // reveal: cup lifts aside, dice sit on the felt, then the verdict card drops.
+      case "CHALLENGE_RESOLVED": {
+        setRevealData(lastEvent.payload);
+        setChallengerName(null);
+        if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
+        verdictTimerRef.current = setTimeout(() => setShowVerdict(true), VERDICT_DELAY_MS);
+        break;
+      }
+
+      case "LIFE_LOST": {
+        const userId = lastEvent.payload?.userId as string | undefined;
+        if (userId) {
+          setFlashUserId(userId);
+          setTimeout(() => setFlashUserId(null), 800);
+        }
+        break;
+      }
+
+      case "EMOTE": {
+        const { userId, emote } = lastEvent.payload;
+        // Muting hides other players' emotes; your own always show
+        if (useStore.getState().emotesMuted && userId !== user?.id) break;
+        playEmotePop();
+        emoteKeyRef.current += 1;
+        const key = emoteKeyRef.current;
+        setActiveEmotes((prev) => ({ ...prev, [userId]: { emote, key } }));
+        if (emoteTimersRef.current[userId]) clearTimeout(emoteTimersRef.current[userId]);
+        emoteTimersRef.current[userId] = setTimeout(() => {
+          delete emoteTimersRef.current[userId];
+          setActiveEmotes((prev) => {
+            const next = { ...prev };
+            delete next[userId];
+            return next;
+          });
+        }, EMOTE_VISIBLE_MS);
+        break;
       }
     }
   }, [lastEvent]);
 
   // ---------- Actions ----------
+
+  async function sendEmote(emote: EmoteId) {
+    if (!user) return;
+    await broadcastGameEvent({ type: "EMOTE", payload: { userId: user.id, emote } });
+  }
 
   async function handleRoll() {
     if (!roomId) return;
@@ -379,7 +432,6 @@ export default function GameScreen() {
   async function handlePullIt() {
     if (!roomId || !currentDeclaration || !previousTurnUserId || !user) return;
 
-    isChallengerRef.current = true;
     setActionError(null);
 
     await broadcastGameEvent({
@@ -397,7 +449,6 @@ export default function GameScreen() {
 
     if (error || !data || data.error) {
       setActionError(data?.error ?? "Challenge failed. Try again.");
-      isChallengerRef.current = false;
       // Unblock everyone from challenge_pending
       await broadcastGameEvent({ type: "CHALLENGE_CANCELLED", payload: {} });
       return;
@@ -405,17 +456,17 @@ export default function GameScreen() {
 
     const result = data as ChallengeResult;
 
-    // Show overlay immediately for the challenger
-    setChallengeResult(result);
-    setShowChallengeResult(true);
-
-    // Broadcast resolution to all peers
+    // Broadcast the resolution — echoes back to this client too, which is what
+    // kicks off the shared reveal choreography for everyone at once.
     await broadcastGameEvent({
       type: "CHALLENGE_RESOLVED",
       payload: {
         wasHonest: result.wasHonest,
+        challengerUserId: user.id,
         loserUserId: result.loserUserId,
         livesLost: result.livesLost,
+        newLives: result.newLives,
+        isEliminated: result.isEliminated,
         revealedRoll: result.revealedRoll,
         declared: result.declared,
       },
@@ -435,25 +486,21 @@ export default function GameScreen() {
         type: "GAME_OVER",
         payload: { winnerUserId: result.winnerUserId },
       });
-      setShowChallengeResult(false);
-      isChallengerRef.current = false;
-    } else {
-      // Winner of the challenge goes first next round
-      const prevTurnId = previousTurnUserId;
-      const challengerId = user.id;
-      nextRoundStarterRef.current = result.wasHonest ? prevTurnId : challengerId;
-      // Overlay stays up until the challenger taps X (dismissChallengeOverlay)
     }
   }
 
-  async function dismissChallengeOverlay() {
-    setShowChallengeResult(false);
-    if (isChallengerRef.current && nextRoundStarterRef.current) {
-      isChallengerRef.current = false;
-      const starter = nextRoundStarterRef.current;
-      nextRoundStarterRef.current = null;
-      await startNextRound(starter);
-    }
+  async function dismissVerdict() {
+    setShowVerdict(false);
+    if (!revealData || !user) return;
+
+    // Only the challenger drives the next round; everyone else just closes the card
+    const iAmChallenger = revealData.challengerUserId === user.id;
+    if (!iAmChallenger || winnerId) return;
+
+    // The player after the one who lost a life opens the next round
+    const { gamePlayers: latest } = useStore.getState();
+    const starter = nextActivePlayer(latest, revealData.loserUserId).userId;
+    await startNextRound(starter);
   }
 
   async function startNextRound(starterUserId: string) {
@@ -465,9 +512,9 @@ export default function GameScreen() {
 
     if (active.length < 2) return; // game over — already handled
 
-    // Winner of the challenge starts next round; fall back to first active if eliminated
-    const winnerActive = active.find((p) => p.userId === starterUserId);
-    const starter = winnerActive ?? active[0];
+    // Starter goes first; fall back to first active if they were eliminated
+    const starterActive = active.find((p) => p.userId === starterUserId);
+    const starter = starterActive ?? active[0];
     const starterIdx = active.findIndex((p) => p.userId === starter.userId);
 
     // Rotate so starter goes first
@@ -484,49 +531,55 @@ export default function GameScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#0a1628", alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color="#e94560" size="large" />
+      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={C.accent} size="large" />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#0a1628" }}>
-      {/* ── Overlays ── */}
-      {showChallengeResult && challengeResult && (
-        <ChallengeOverlay
-          result={challengeResult}
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* ── Verdict overlay ── */}
+      {showVerdict && revealData && (
+        <VerdictModal
+          data={revealData}
           players={gamePlayers}
-          onDismiss={dismissChallengeOverlay}
+          onDismiss={dismissVerdict}
         />
       )}
 
-      {phase === "game_over" && (
+      {/* ── Game over overlay (waits for the verdict card to be dismissed) ── */}
+      {phase === "game_over" && !showVerdict && (
         <View
           style={{
             position: "absolute", top: 0, bottom: 0, left: 0, right: 0,
             backgroundColor: "rgba(0,0,0,0.92)",
             alignItems: "center", justifyContent: "center", zIndex: 300,
+            paddingHorizontal: 24,
           }}
         >
           <View
             style={{
-              backgroundColor: "#16213e", borderRadius: 24, padding: 32,
-              width: "85%", alignItems: "center",
+              backgroundColor: C.card, borderRadius: 20, padding: 32,
+              width: "100%", maxWidth: 380, alignItems: "center",
+              borderWidth: 1, borderColor: C.border,
             }}
           >
-            <Text style={{ fontSize: 52, marginBottom: 8 }}>🏆</Text>
-            <Text style={{ color: "#fff", fontSize: 24, fontWeight: "800", marginBottom: 6 }}>
-              {winner?.userId === user?.id ? "You win!" : `${winner?.displayName ?? "Someone"} wins!`}
+            <Text style={{ fontSize: 48, marginBottom: 10 }}>🏆</Text>
+            <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.fgFaint, textTransform: "uppercase", marginBottom: 8 }}>
+              Game over
             </Text>
-            <Text style={{ color: "#a0a0b0", fontSize: 13, marginBottom: 24, textAlign: "center" }}>
-              Well played!
+            <Text style={{ color: C.fg, fontSize: 26, fontWeight: "800", letterSpacing: -0.5, marginBottom: 6, textAlign: "center" }}>
+              {winner?.userId === user?.id ? "You win." : `${winner?.displayName ?? "Someone"} wins.`}
+            </Text>
+            <Text style={{ fontFamily: MONO, color: C.fgMuted, fontSize: 12, marginBottom: 26 }}>
+              Last one standing.
             </Text>
             <TouchableOpacity
-              style={{ backgroundColor: "#e94560", borderRadius: 14, paddingVertical: 13, paddingHorizontal: 40 }}
+              style={{ backgroundColor: C.accent, borderRadius: 10, paddingVertical: 13, paddingHorizontal: 40 }}
               onPress={() => router.back()}
             >
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Back to Lobby</Text>
+              <Text style={{ color: C.onAccent, fontWeight: "600", fontSize: 15 }}>Back to Lobby</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -542,21 +595,27 @@ export default function GameScreen() {
         >
           <TouchableOpacity
             onPress={() => router.back()}
-            style={{ padding: 6, marginRight: 8 }}
+            style={{ padding: 6, marginRight: 10 }}
           >
-            <Ionicons name="arrow-back" size={22} color="#e8e8f0" />
+            <Ionicons name="arrow-back" size={20} color={C.fg} />
           </TouchableOpacity>
-          <Text style={{ color: "#e8e8f0", fontSize: 17, fontWeight: "700", flex: 1 }}>
-            Mia
+          <View style={{ backgroundColor: "#ffffff", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, marginRight: 10 }}>
+            <Image
+              source={require("../../assets/mia-logo.png")}
+              style={{ width: 38, height: 21, resizeMode: "contain" }}
+            />
+          </View>
+          <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase", flex: 1 }}>
+            Live table
           </Text>
           {!amIActive && phase !== "game_over" && (
             <View
               style={{
-                backgroundColor: "#1e2a40", borderRadius: 20,
-                paddingHorizontal: 10, paddingVertical: 4,
+                backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+                borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
               }}
             >
-              <Text style={{ color: "#a0a0b0", fontSize: 11 }}>👻 Spectating</Text>
+              <Text style={{ fontFamily: MONO, color: C.fgMuted, fontSize: 10, letterSpacing: 1 }}>SPECTATING</Text>
             </View>
           )}
         </View>
@@ -566,7 +625,7 @@ export default function GameScreen() {
       {!connected && (
         <View
           style={{
-            backgroundColor: "#7c3aed",
+            backgroundColor: C.accent,
             paddingVertical: 6,
             paddingHorizontal: 16,
             flexDirection: "row",
@@ -576,30 +635,35 @@ export default function GameScreen() {
           }}
         >
           <ActivityIndicator size="small" color="#fff" />
-          <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
+          <Text style={{ color: "#fff", fontFamily: MONO, fontSize: 12, fontWeight: "600" }}>
             Reconnecting…
           </Text>
         </View>
       )}
 
       {/* ── Table ── */}
-      <GameTable
-        players={gamePlayers}
-        myUserId={user?.id ?? ""}
-        currentTurnUserId={currentTurnUserId}
-        previousTurnUserId={previousTurnUserId}
-        currentDeclaration={currentDeclaration}
-        flashUserId={flashUserId}
-        myActualRoll={myActualRoll}
-        peeking={peeking}
-        isRolling={isRolling}
-        onTogglePeek={() => setPeeking((p) => !p)}
-        isMyTurn={isMyTurn}
-        phase={phase}
-      />
+      <View>
+        <GameTable
+          players={gamePlayers}
+          myUserId={user?.id ?? ""}
+          currentTurnUserId={currentTurnUserId}
+          previousTurnUserId={previousTurnUserId}
+          currentDeclaration={currentDeclaration}
+          flashUserId={flashUserId}
+          myActualRoll={myActualRoll}
+          peeking={peeking}
+          isRolling={isRolling}
+          onTogglePeek={() => setPeeking((p) => !p)}
+          isMyTurn={isMyTurn}
+          phase={phase}
+          revealRoll={revealData ? (revealData.revealedRoll as Roll) : null}
+          emotes={activeEmotes}
+        />
+        <EmotePicker onSend={sendEmote} />
+      </View>
 
-      {/* ── Declaration input — compact, right below the table ── */}
-      {phase === "my_turn_declare" && isMyTurn && amIActive && (
+      {/* ── Declaration input — right below the table ── */}
+      {phase === "my_turn_declare" && isMyTurn && amIActive && !revealData && (
         <View style={{ marginTop: 4 }}>
           <DeclarationInput
             key={roundKey}
@@ -612,7 +676,7 @@ export default function GameScreen() {
       {/* ── Action panel ── */}
       <View style={{ paddingHorizontal: 16, paddingBottom: 32, marginTop: "auto" }}>
         {actionError && (
-          <Text style={{ color: "#e94560", fontSize: 12, textAlign: "center", marginBottom: 8 }}>
+          <Text style={{ fontFamily: MONO, color: C.danger, fontSize: 12, textAlign: "center", marginBottom: 8 }}>
             {actionError}
           </Text>
         )}
@@ -621,21 +685,30 @@ export default function GameScreen() {
         {!amIActive && phase !== "game_over" && (
           <View
             style={{
-              backgroundColor: "#111827", borderRadius: 14, padding: 16,
-              alignItems: "center", borderWidth: 1, borderColor: "#1e2a40",
+              backgroundColor: C.surface, borderRadius: 12, padding: 16,
+              alignItems: "center", borderWidth: 1, borderColor: C.border,
             }}
           >
-            <Text style={{ color: "#6b7280", fontSize: 13 }}>
-              You've been eliminated — watching the game
+            <Text style={{ fontFamily: MONO, color: C.fgFaint, fontSize: 12 }}>
+              Eliminated — watching the table
             </Text>
           </View>
         )}
 
         {/* Waiting / starting */}
-        {amIActive && phase === "waiting" && (
+        {amIActive && phase === "waiting" && !revealData && (
           <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10, padding: 14 }}>
-            <ActivityIndicator color="#e94560" size="small" />
-            <Text style={{ color: "#6b7280", fontSize: 13 }}>Starting round…</Text>
+            <ActivityIndicator color={C.accent} size="small" />
+            <Text style={{ fontFamily: MONO, color: C.fgFaint, fontSize: 12 }}>Starting round…</Text>
+          </View>
+        )}
+
+        {/* Reveal in progress */}
+        {amIActive && (phase === "waiting" || phase === "challenge_pending") && revealData && (
+          <View style={{ alignItems: "center", padding: 14 }}>
+            <Text style={{ fontFamily: MONO, color: C.fgMuted, fontSize: 12, letterSpacing: 1 }}>
+              The cup comes up…
+            </Text>
           </View>
         )}
 
@@ -643,13 +716,13 @@ export default function GameScreen() {
         {amIActive && phase === "others_turn" && currentPlayer && (
           <View
             style={{
-              backgroundColor: "#111827", borderRadius: 14, padding: 14,
-              alignItems: "center", borderWidth: 1, borderColor: "#1e2a40",
+              backgroundColor: C.surface, borderRadius: 12, padding: 14,
+              alignItems: "center", borderWidth: 1, borderColor: C.border,
             }}
           >
-            <Text style={{ color: "#6b7280", fontSize: 13 }}>
-              Waiting for{" "}
-              <Text style={{ color: "#e8e8f0", fontWeight: "700" }}>
+            <Text style={{ fontFamily: MONO, color: C.fgFaint, fontSize: 12 }}>
+              Cup is with{" "}
+              <Text style={{ color: C.fg, fontWeight: "700" }}>
                 {currentPlayer.displayName}
               </Text>
               …
@@ -657,57 +730,56 @@ export default function GameScreen() {
           </View>
         )}
 
-        {/* Challenge pending */}
-        {amIActive && phase === "challenge_pending" && (
+        {/* Challenge pending — before the resolution arrives */}
+        {amIActive && phase === "challenge_pending" && !revealData && (
           <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10, padding: 14 }}>
-            <ActivityIndicator color="#e94560" size="small" />
-            <Text style={{ color: "#6b7280", fontSize: 13 }}>Resolving challenge…</Text>
+            <ActivityIndicator color={C.danger} size="small" />
+            <Text style={{ fontFamily: MONO, color: C.danger, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>
+              {challengerName ? `${challengerName} pulled it!` : "Pulling it…"}
+            </Text>
           </View>
         )}
 
-        {/* My turn — roll */}
+        {/* My turn — roll or pull it */}
         {amIActive && phase === "my_turn_pre_roll" && (
           <View>
-            <Text style={{ color: "#e94560", textAlign: "center", fontWeight: "700", fontSize: 14, marginBottom: 10 }}>
+            <Text style={{ fontFamily: MONO, color: C.accent, textAlign: "center", fontWeight: "700", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>
               Your turn
             </Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
               {canPullIt && (
                 <TouchableOpacity
                   style={{
-                    flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: "center",
-                    borderWidth: 2, borderColor: "#e94560", backgroundColor: "transparent",
+                    flex: 1, borderRadius: 10, paddingVertical: 14, alignItems: "center",
+                    borderWidth: 1.5, borderColor: C.danger, backgroundColor: "transparent",
                   }}
                   onPress={handlePullIt}
                 >
-                  <Text style={{ color: "#e94560", fontWeight: "700", fontSize: 15 }}>Pull It 👀</Text>
+                  <Text style={{ color: C.danger, fontWeight: "700", fontSize: 14 }}>Pull It</Text>
+                  <Text style={{ fontFamily: MONO, color: C.fgFaint, fontSize: 9, marginTop: 2 }}>call the bluff</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
                 style={{
-                  flex: 1, borderRadius: 14, paddingVertical: 14,
-                  alignItems: "center", backgroundColor: "#e94560",
+                  flex: 1, borderRadius: 10, paddingVertical: 14,
+                  alignItems: "center", backgroundColor: C.accent,
                 }}
                 onPress={handleRoll}
               >
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Roll 🎲</Text>
+                <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 14 }}>Roll</Text>
+                <Text style={{ fontFamily: MONO, color: "rgba(255,255,255,0.6)", fontSize: 9, marginTop: 2 }}>
+                  {currentDeclaration != null ? `then beat ${formatDeclaration(currentDeclaration)}` : "open the round"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* My turn — declare (input handled above the action panel) */}
-        {amIActive && phase === "my_turn_declare" && canPullIt && (
-          <TouchableOpacity
-            style={{
-              borderRadius: 14, paddingVertical: 14, alignItems: "center",
-              borderWidth: 2, borderColor: "#e94560", backgroundColor: "transparent",
-              marginTop: 8,
-            }}
-            onPress={handlePullIt}
-          >
-            <Text style={{ color: "#e94560", fontWeight: "700", fontSize: 15 }}>Pull It 👀</Text>
-          </TouchableOpacity>
+        {/* My turn — declaring; peek hint lives on the cup itself */}
+        {amIActive && phase === "my_turn_declare" && (
+          <Text style={{ fontFamily: MONO, color: C.fgFaint, fontSize: 10, textAlign: "center", letterSpacing: 1 }}>
+            Peek under the cup, then declare — truth optional.
+          </Text>
         )}
       </View>
     </View>

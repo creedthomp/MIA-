@@ -7,7 +7,23 @@ export type RealtimeEventType =
   | "CHALLENGE_RESOLVED"
   | "LIFE_LOST"
   | "ROUND_STARTED"
-  | "GAME_OVER";
+  | "GAME_OVER"
+  | "EMOTE";
+
+export type EmoteId =
+  | "laugh"
+  | "doubt"
+  | "shock"
+  | "cool"
+  | "sweat"
+  | "taunt"
+  | "liar"
+  | "hurry";
+
+export interface EmotePayload {
+  userId: string;
+  emote: EmoteId;
+}
 
 export interface RollDeclaredPayload {
   userId: string;
@@ -20,8 +36,11 @@ export interface ChallengePayload {
 
 export interface ChallengeResolvedPayload {
   wasHonest: boolean;
+  challengerUserId: string;
   loserUserId: string;
   livesLost: number;
+  newLives: number;
+  isEliminated: boolean;
   revealedRoll: Roll;
   declared: Declaration;
 }
@@ -48,4 +67,5 @@ export type RealtimeEvent =
   | { type: "CHALLENGE_RESOLVED"; payload: ChallengeResolvedPayload }
   | { type: "LIFE_LOST"; payload: LifeLostPayload }
   | { type: "ROUND_STARTED"; payload: RoundStartedPayload }
-  | { type: "GAME_OVER"; payload: GameOverPayload };
+  | { type: "GAME_OVER"; payload: GameOverPayload }
+  | { type: "EMOTE"; payload: EmotePayload };

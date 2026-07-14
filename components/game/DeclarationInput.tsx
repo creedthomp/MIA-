@@ -1,8 +1,22 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Platform } from "react-native";
 import { ALL_DECLARATIONS, formatDeclaration } from "@/utils/declarations";
 import { getRank } from "@/utils/rollHierarchy";
 import type { Declaration } from "@/types/game";
+
+const C = {
+  surface:  "#0f0f0f",
+  border:   "#262626",
+  fg:       "#fafafa",
+  fgMuted:  "#a3a3a3",
+  fgFaint:  "#6f6f6f",
+  accent:   "#4d7cff",
+  onAccent: "#ffffff",
+  danger:   "#f0553b",
+  warn:     "#f5a623",
+  ok:       "#4ade80",
+};
+const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
 
 interface Props {
   currentDeclaration: Declaration | null;
@@ -24,13 +38,10 @@ function suggest(text: string): Declaration | null {
 
 export function DeclarationInput({ currentDeclaration, onDeclare, disabled }: Props) {
   const [text, setText] = useState("");
+  const [confirmingLow, setConfirmingLow] = useState(false);
 
   const parsed = parse(text);
   const hint = suggest(text);
-  const isBelowFloor =
-    parsed != null &&
-    currentDeclaration != null &&
-    getRank(parsed) < getRank(currentDeclaration);
 
   const effectiveDeclaration: Declaration | null = parsed ?? (text.length === 2 ? hint : null);
   const isBelow =
@@ -39,26 +50,28 @@ export function DeclarationInput({ currentDeclaration, onDeclare, disabled }: Pr
     getRank(effectiveDeclaration) < getRank(currentDeclaration);
 
   let hintText = "";
-  let hintColor = "#9ca3af";
+  let hintColor = C.fgMuted;
 
   if (text.length === 2) {
     if (parsed != null) {
       if (parsed === 21) {
-        hintText = "MIA! 🎲";
-        hintColor = "#f59e0b";
+        hintText = "MIA — beats everything";
+        hintColor = C.warn;
       } else if (parsed % 11 === 0) {
-        hintText = isBelowFloor ? "Doubles — below floor ⚠️" : "Doubles ✓";
-        hintColor = isBelowFloor ? "#f59e0b" : "#4ade80";
+        hintText = isBelow ? "Doubles — below the call. Costs 1 life." : "Doubles — beats any normal roll";
+        hintColor = isBelow ? C.warn : C.ok;
       } else {
-        hintText = isBelowFloor ? "Below floor — costs 1 life ⚠️" : `${formatDeclaration(parsed)} ✓`;
-        hintColor = isBelowFloor ? "#f59e0b" : "#4ade80";
+        hintText = isBelow
+          ? `Below ${formatDeclaration(currentDeclaration!)} — declaring this costs 1 life.`
+          : `${formatDeclaration(parsed)} — valid call`;
+        hintColor = isBelow ? C.warn : C.ok;
       }
     } else if (hint != null) {
-      hintText = `Did you mean ${formatDeclaration(hint)}?`;
-      hintColor = "#f59e0b";
+      hintText = `Higher die first — did you mean ${formatDeclaration(hint)}?`;
+      hintColor = C.warn;
     } else {
-      hintText = "Not valid (e.g. 63, 55, 21)";
-      hintColor = "#ef4444";
+      hintText = "Not a real roll (try 63, 55, 21…)";
+      hintColor = C.danger;
     }
   }
 
@@ -66,41 +79,59 @@ export function DeclarationInput({ currentDeclaration, onDeclare, disabled }: Pr
 
   function handlePress() {
     if (!canDeclare || effectiveDeclaration == null) return;
+    // Below-floor declarations cost a life — require a second tap to confirm
+    if (isBelow && !confirmingLow) {
+      setConfirmingLow(true);
+      return;
+    }
+    setConfirmingLow(false);
     onDeclare(effectiveDeclaration);
     setText("");
   }
 
-  let borderColor = "#2a3a54";
+  let borderColor = C.border;
   if (text.length === 2) {
-    if (parsed != null) borderColor = isBelow ? "#f59e0b" : "#16a34a";
-    else if (hint != null) borderColor = "#f59e0b";
-    else borderColor = "#ef4444";
+    if (parsed != null) borderColor = isBelow ? C.warn : C.ok;
+    else if (hint != null) borderColor = C.warn;
+    else borderColor = C.danger;
+  }
+
+  let buttonLabel = "Type roll";
+  if (effectiveDeclaration != null) {
+    if (isBelow) buttonLabel = confirmingLow ? "Confirm — lose 1 life" : "Declare (−1 life)";
+    else buttonLabel = `Declare ${formatDeclaration(effectiveDeclaration)}`;
   }
 
   return (
     <View style={{ alignItems: "center" }}>
-      <Text style={{ color: "#4a5568", fontSize: 10, letterSpacing: 1, marginBottom: 5 }}>
-        DECLARE YOUR ROLL
+      <Text style={{ fontFamily: MONO, fontSize: 9, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase", marginBottom: 6 }}>
+        {currentDeclaration != null
+          ? `Declare your roll — beat ${formatDeclaration(currentDeclaration)}`
+          : "Declare your roll"}
       </Text>
       <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
         <TextInput
           value={text}
-          onChangeText={(t) => setText(t.replace(/[^0-9]/g, "").slice(0, 2))}
+          onChangeText={(t) => {
+            setText(t.replace(/[^0-9]/g, "").slice(0, 2));
+            setConfirmingLow(false);
+          }}
           keyboardType="numeric"
           maxLength={2}
           placeholder="—"
-          placeholderTextColor="#374151"
+          placeholderTextColor={C.fgFaint}
           autoFocus
           style={{
-            width: 56,
-            backgroundColor: "#0d1626",
-            borderWidth: 2,
+            width: 58,
+            backgroundColor: C.surface,
+            borderWidth: 1.5,
             borderColor,
             borderRadius: 10,
-            paddingVertical: 7,
-            color: "#fff",
+            paddingVertical: 8,
+            color: C.fg,
+            fontFamily: MONO,
             fontSize: 20,
-            fontWeight: "800",
+            fontWeight: "700",
             textAlign: "center",
             letterSpacing: 2,
           }}
@@ -110,36 +141,36 @@ export function DeclarationInput({ currentDeclaration, onDeclare, disabled }: Pr
           disabled={!canDeclare}
           style={{
             borderRadius: 10,
-            paddingVertical: 9,
-            paddingHorizontal: 14,
+            paddingVertical: 11,
+            paddingHorizontal: 16,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: !canDeclare
-              ? "#111827"
+              ? C.surface
               : isBelow
-              ? "transparent"
-              : "#e94560",
-            borderWidth: isBelow && canDeclare ? 1.5 : 0,
-            borderColor: "#f59e0b",
+              ? confirmingLow ? C.warn : "transparent"
+              : C.accent,
+            borderWidth: isBelow && canDeclare && !confirmingLow ? 1.5 : 0,
+            borderColor: C.warn,
           }}
         >
           <Text
             style={{
               fontWeight: "700",
               fontSize: 13,
-              color: !canDeclare ? "#374151" : isBelow ? "#f59e0b" : "#fff",
+              color: !canDeclare
+                ? C.fgFaint
+                : isBelow
+                ? confirmingLow ? "#141414" : C.warn
+                : C.onAccent,
             }}
           >
-            {effectiveDeclaration != null
-              ? isBelow
-                ? "Declare (−1 life)"
-                : `Declare ${formatDeclaration(effectiveDeclaration)}`
-              : "Type roll →"}
+            {buttonLabel}
           </Text>
         </TouchableOpacity>
       </View>
       {hintText !== "" && (
-        <Text style={{ color: hintColor, fontSize: 11, marginTop: 4 }}>
+        <Text style={{ fontFamily: MONO, color: hintColor, fontSize: 11, marginTop: 6, textAlign: "center", paddingHorizontal: 16 }}>
           {hintText}
         </Text>
       )}

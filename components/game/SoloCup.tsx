@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Platform } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -11,6 +11,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { DiceFace } from "./DiceFace";
 import type { DieValue, Roll } from "@/types/game";
+
+const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
 
 // ---------- Cup sections (right-side up) ----------
 const CUP_SECTIONS = [
@@ -185,8 +187,11 @@ export function SoloCup({
           style={{
             position: "absolute",
             bottom: 0,
+            fontFamily: MONO,
             fontSize: 9,
-            color: peeking ? "#888" : "#e94560",
+            letterSpacing: 1,
+            textTransform: "uppercase",
+            color: peeking ? "#6f6f6f" : "#4d7cff",
             fontWeight: "600",
           }}
         >
@@ -194,7 +199,7 @@ export function SoloCup({
         </Text>
       )}
       {isRolling && (
-        <Text style={{ position: "absolute", bottom: 0, fontSize: 9, color: "#888" }}>
+        <Text style={{ position: "absolute", bottom: 0, fontFamily: MONO, fontSize: 9, letterSpacing: 1, color: "#6f6f6f" }}>
           rolling…
         </Text>
       )}

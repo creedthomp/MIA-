@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, Easing } from "react-native-reanimated";
 import { supabase } from "@/services/supabase";
 
 const C = {
@@ -37,6 +38,32 @@ function friendlyError(msg: string): string {
   return msg;
 }
 
+function FloatDie({ floatAmount, floatDuration, floatDelay = 0, staticRotate = 0, rockDir = 1 as 1 | -1, style, children }: {
+  floatAmount: number; floatDuration: number; floatDelay?: number;
+  staticRotate?: number; rockDir?: 1 | -1;
+  style?: object; children?: React.ReactNode;
+}) {
+  const yIdle = useSharedValue(0);
+  const rockV = useSharedValue(staticRotate);
+
+  useEffect(() => {
+    yIdle.value = withDelay(floatDelay, withRepeat(
+      withTiming(-floatAmount, { duration: floatDuration, easing: Easing.inOut(Easing.sin) }),
+      -1, true,
+    ));
+    rockV.value = withDelay(floatDelay + 300, withRepeat(
+      withTiming(staticRotate + 2 * rockDir, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+      -1, true,
+    ));
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: yIdle.value }, { rotate: `${rockV.value}deg` }],
+  }));
+
+  return <Animated.View style={[style, animStyle]}>{children}</Animated.View>;
+}
+
 // ── Left brand panel ──────────────────────────────────────────
 function BrandPanel() {
   return (
@@ -58,7 +85,7 @@ function BrandPanel() {
       {/* Stacked dice art — decorative */}
       <View style={{ flexDirection: "row", gap: 14, marginBottom: 44, alignItems: "flex-end" }}>
         {/* Die showing 6 */}
-        <View style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: "#141414", borderWidth: 1, borderColor: "#2a2a2a", justifyContent: "space-between", padding: 9, transform: [{ rotate: "-8deg" }] }}>
+        <FloatDie floatAmount={4} floatDuration={1100} floatDelay={0} staticRotate={-8} rockDir={-1} style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: "#141414", borderWidth: 1, borderColor: "#2a2a2a", justifyContent: "space-between", padding: 9 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
             <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
@@ -71,10 +98,10 @@ function BrandPanel() {
             <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
             <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4" }} />
           </View>
-        </View>
+        </FloatDie>
 
         {/* Die showing 5 */}
-        <View style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: "#141414", borderWidth: 1, borderColor: "#2a2a2a", padding: 10, transform: [{ rotate: "5deg" }] }}>
+        <FloatDie floatAmount={5} floatDuration={950} floatDelay={200} staticRotate={5} rockDir={1} style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: "#141414", borderWidth: 1, borderColor: "#2a2a2a", padding: 10 }}>
           <View style={{ flex: 1, justifyContent: "space-between" }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#f4f4f4" }} />
@@ -88,18 +115,18 @@ function BrandPanel() {
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#f4f4f4" }} />
             </View>
           </View>
-        </View>
+        </FloatDie>
 
         {/* Die showing 1 — white */}
-        <View style={{ width: 80, height: 80, borderRadius: 14, backgroundColor: "#efefef", alignItems: "center", justifyContent: "center", transform: [{ rotate: "-3deg" }] }}>
+        <FloatDie floatAmount={6} floatDuration={1050} floatDelay={450} staticRotate={-3} rockDir={-1} style={{ width: 80, height: 80, borderRadius: 14, backgroundColor: "#efefef", alignItems: "center", justifyContent: "center" }}>
           <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: "#141414" }} />
-        </View>
+        </FloatDie>
 
         {/* Die showing 2 — small dark, rotated */}
-        <View style={{ width: 52, height: 52, borderRadius: 9, backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#2a2a2a", transform: [{ rotate: "12deg" }], position: "relative" }}>
+        <FloatDie floatAmount={3} floatDuration={900} floatDelay={650} staticRotate={12} rockDir={1} style={{ width: 52, height: 52, borderRadius: 9, backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#2a2a2a", position: "relative" }}>
           <View style={{ position: "absolute", width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4", top: 10, left: 10 }} />
           <View style={{ position: "absolute", width: 9, height: 9, borderRadius: 4.5, backgroundColor: "#f4f4f4", bottom: 10, right: 10 }} />
-        </View>
+        </FloatDie>
       </View>
 
       <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 5, textTransform: "uppercase", color: C.accent, marginBottom: 14 }}>

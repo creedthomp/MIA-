@@ -11,6 +11,7 @@ import {
   Platform,
   useWindowDimensions,
   ScrollView,
+  Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useStore } from "@/services/store";
@@ -180,7 +181,7 @@ function LeaderboardTab() {
 
 // ── Settings tab ─────────────────────────────────────────────────
 function SettingsTab() {
-  const { user, profile, setProfile } = useStore();
+  const { user, profile, setProfile, emotesMuted, setEmotesMuted } = useStore();
   const [name, setName] = useState(profile?.display_name ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -258,6 +259,33 @@ function SettingsTab() {
         </Text>
         <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderSoft, borderRadius: 10, paddingVertical: 13, paddingHorizontal: 16 }}>
           <Text style={{ color: C.fgFaint, fontSize: 15 }}>{user?.email ?? "—"}</Text>
+        </View>
+      </View>
+
+      {/* Table preferences */}
+      <View style={{ marginBottom: 40 }}>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase", marginBottom: 10 }}>
+          Table
+        </Text>
+        <View
+          style={{
+            backgroundColor: C.surface, borderWidth: 1, borderColor: C.borderSoft, borderRadius: 10,
+            paddingVertical: 12, paddingHorizontal: 16,
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+          }}
+        >
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={{ color: C.fg, fontSize: 15, marginBottom: 2 }}>Mute emotes</Text>
+            <Text style={{ color: C.fgFaint, fontSize: 12 }}>
+              Hide other players' taunts during games. Yours still send.
+            </Text>
+          </View>
+          <Switch
+            value={emotesMuted}
+            onValueChange={setEmotesMuted}
+            trackColor={{ false: "#2a2a2a", true: C.accent }}
+            thumbColor="#f4f4f4"
+          />
         </View>
       </View>
 
@@ -411,6 +439,20 @@ export default function PlayScreen() {
                   <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Enter the 6-character room code</Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Table v2 design sandbox — solo, no room needed */}
+              <TouchableOpacity
+                onPress={() => router.push("/game-test" as never)}
+                disabled={!!loading}
+                style={{
+                  marginTop: 12, borderWidth: 1, borderColor: C.borderSoft, borderRadius: 14,
+                  paddingVertical: 14, alignItems: "center",
+                }}
+              >
+                <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase" }}>
+                  Test Gameplay — new table preview
+                </Text>
+              </TouchableOpacity>
 
             </View>
           </View>
