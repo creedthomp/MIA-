@@ -8,6 +8,7 @@ import Animated, {
   withRepeat,
   withTiming,
   cancelAnimation,
+  Easing,
 } from "react-native-reanimated";
 import { Die } from "./Die";
 import type { DieValue, Roll } from "@/types/game";
@@ -100,20 +101,21 @@ export function DiceCup({
 
   useEffect(() => {
     if (isRolling) {
+      // Gentle swirl — small amplitude, slow, sine-eased
       shakeX.value = withRepeat(
         withSequence(
-          withTiming(-9, { duration: 55 }),
-          withTiming(9, { duration: 55 }),
-          withTiming(-7, { duration: 50 }),
-          withTiming(7, { duration: 50 }),
+          withTiming(-4, { duration: 105, easing: Easing.inOut(Easing.sin) }),
+          withTiming(4, { duration: 105, easing: Easing.inOut(Easing.sin) }),
+          withTiming(-3, { duration: 95, easing: Easing.inOut(Easing.sin) }),
+          withTiming(3, { duration: 95, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
         true
       );
       shakeRot.value = withRepeat(
         withSequence(
-          withTiming(-6, { duration: 70 }),
-          withTiming(6, { duration: 70 }),
+          withTiming(-2.5, { duration: 150, easing: Easing.inOut(Easing.sin) }),
+          withTiming(2.5, { duration: 150, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
         true

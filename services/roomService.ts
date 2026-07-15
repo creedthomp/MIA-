@@ -58,7 +58,7 @@ export async function joinByCode(
     .select("*", { count: "exact", head: true })
     .eq("room_id", room.id);
 
-  if (count !== null && count >= (room.max_players ?? 8)) {
+  if (count !== null && count >= (room.max_players ?? 10)) {
     return { roomId: null, error: "Room is full" };
   }
 
@@ -98,7 +98,7 @@ export async function findOrJoinQuickMatch(
         .select("*", { count: "exact", head: true })
         .eq("room_id", candidate.id);
 
-      if (count !== null && count < (candidate.max_players ?? 8)) {
+      if (count !== null && count < (candidate.max_players ?? 10)) {
         const { data: existing } = await supabase
           .from("room_players")
           .select("id")

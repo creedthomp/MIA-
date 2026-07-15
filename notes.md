@@ -5,7 +5,7 @@
 ## Game Rules
 
 ### Overview
-2–8 players. Each player starts with 5 lives. Players take turns rolling two dice under a cup, peeking privately, and declaring a value. You can lie. Players can challenge the previous roll before taking their turn. Last player with lives wins.
+2–10 players. Each player starts with 5 lives. Players take turns rolling two dice under a cup, peeking privately, and declaring a value. You can lie. Players can challenge the previous roll before taking their turn. Last player with lives wins.
 
 ### Reading a Roll
 Always read the higher die first. Rolling a 2 and a 6 = **62**, not 26.

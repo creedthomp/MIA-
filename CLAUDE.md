@@ -1,6 +1,6 @@
 # Mia: a dice game
 
-A real-time multiplayer dice game (web + mobile) for 2–8 players. Players roll dice secretly, declare results — truthfully or lying — and can challenge the previous player's claim. See notes.md for full rules and tech deep-dives.
+A real-time multiplayer dice game (web + mobile) for 2–10 players. Players roll dice secretly, declare results — truthfully or lying — and can challenge the previous player's claim. See notes.md for full rules and tech deep-dives.
 
 ---
 

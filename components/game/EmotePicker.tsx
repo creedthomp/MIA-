@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, TouchableOpacity, Platform } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,9 +12,11 @@ import type { EmoteId } from "@/types/realtimeEvents";
 const C = {
   surface: "#0f0f0f",
   border:  "#262626",
+  fg:      "#fafafa",
   fgMuted: "#a3a3a3",
   fgFaint: "#6f6f6f",
 };
+const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
 
 const COOLDOWN_MS = 4000;
 
@@ -68,9 +69,9 @@ export function EmotePicker({ onSend }: EmotePickerProps) {
           {
             flexDirection: "row",
             backgroundColor: C.surface,
-            borderWidth: 1,
+            borderWidth: 1.5,
             borderColor: C.border,
-            borderRadius: 22,
+            borderRadius: 14,
             paddingHorizontal: 5,
             paddingVertical: 4,
             marginBottom: 8,
@@ -86,7 +87,7 @@ export function EmotePicker({ onSend }: EmotePickerProps) {
             style={{
               width: 34,
               height: 34,
-              borderRadius: 17,
+              borderRadius: 10,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -96,27 +97,27 @@ export function EmotePicker({ onSend }: EmotePickerProps) {
         ))}
       </Animated.View>
 
-      {/* Toggle button */}
+      {/* Toggle button — same language as the Roll / Pull It buttons */}
       <TouchableOpacity
         onPress={() => setOpen((o) => !o)}
         disabled={coolingDown}
         style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: C.surface,
-          borderWidth: 1,
-          borderColor: open ? C.fgFaint : C.border,
+          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "center",
+          gap: 7,
+          borderRadius: 14,
+          borderWidth: 1.5,
+          borderColor: open ? C.fgFaint : C.border,
+          backgroundColor: C.surface,
+          paddingVertical: 11,
+          paddingHorizontal: 15,
           opacity: coolingDown ? 0.35 : 1,
         }}
       >
-        <Ionicons
-          name={open ? "close" : "happy-outline"}
-          size={20}
-          color={C.fgMuted}
-        />
+        <Text style={{ fontSize: 15 }}>{open ? "✕" : "🙂"}</Text>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgMuted, textTransform: "uppercase", fontWeight: "600" }}>
+          Emote
+        </Text>
       </TouchableOpacity>
     </View>
   );

@@ -4,6 +4,11 @@ set -e
 export PATH="$HOME/.local/share/supabase:$HOME/.local/bin:$HOME/.bun/bin:$PATH"
 export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"
 
+# Load .env.local so config.toml env() substitution (e.g. Google OAuth) resolves
+if [ -f .env.local ]; then
+  set -a; . ./.env.local; set +a
+fi
+
 CMD=$1
 
 case $CMD in

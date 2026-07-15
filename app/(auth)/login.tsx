@@ -12,8 +12,10 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, Easing } from "react-native-reanimated";
 import { supabase } from "@/services/supabase";
+import { signInWithGoogle } from "@/services/authService";
 
 const C = {
   bg:        "#0a0a0a",
@@ -145,7 +147,16 @@ function LoginForm({ compact }: { compact?: boolean }) {
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [loading,  setLoading]  = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error,    setError]    = useState<string | null>(null);
+
+  async function handleGoogle() {
+    setError(null);
+    setGoogleLoading(true);
+    const { error: e } = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (e) setError(friendlyError(e));
+  }
 
   async function handleLogin() {
     if (!email || !password) { setError("Please enter your email and password."); return; }
@@ -208,6 +219,31 @@ function LoginForm({ compact }: { compact?: boolean }) {
       >
         {loading ? <ActivityIndicator color={C.onAccent} /> : (
           <Text style={{ color: C.onAccent, fontWeight: "600", fontSize: 15 }}>Sign in</Text>
+        )}
+      </TouchableOpacity>
+
+      {/* Divider */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 18 }}>
+        <View style={{ flex: 1, height: 1, backgroundColor: C.borderSoft }} />
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase" }}>or</Text>
+        <View style={{ flex: 1, height: 1, backgroundColor: C.borderSoft }} />
+      </View>
+
+      {/* Google */}
+      <TouchableOpacity
+        onPress={handleGoogle}
+        disabled={googleLoading || loading}
+        style={{
+          flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10,
+          backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border,
+          borderRadius: 10, paddingVertical: 13, opacity: googleLoading ? 0.7 : 1,
+        }}
+      >
+        {googleLoading ? <ActivityIndicator color={C.fgMuted} /> : (
+          <>
+            <Ionicons name="logo-google" size={17} color={C.fg} />
+            <Text style={{ color: C.fg, fontWeight: "600", fontSize: 14 }}>Continue with Google</Text>
+          </>
         )}
       </TouchableOpacity>
 

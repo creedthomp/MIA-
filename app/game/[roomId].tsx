@@ -18,32 +18,32 @@ import { playEmotePop, unloadSounds } from "@/services/sounds";
 import { formatDeclaration } from "@/utils/declarations";
 import { getRank } from "@/utils/rollHierarchy";
 import { nextActivePlayer } from "@/utils/turnOrder";
-import { DiceFace } from "@/components/game/DiceFace";
+import { GameTable2 } from "@/components/game2/GameTable2";
+import { VerdictSheet } from "@/components/game2/VerdictSheet";
+import type { TablePlayer } from "@/components/game2/PlayerPlaque";
 import { DeclarationInput } from "@/components/game/DeclarationInput";
-import { GameTable } from "@/components/game/GameTable";
 import { EmotePicker } from "@/components/game/EmotePicker";
-import type { Player, Declaration, DieValue, Roll } from "@/types/game";
+import type { Player, Declaration, Roll } from "@/types/game";
 import type { ChallengeResolvedPayload, EmoteId } from "@/types/realtimeEvents";
 
 const C = {
-  bg:        "#0a0a0a",
-  surface:   "#0f0f0f",
-  card:      "#101010",
-  border:    "#262626",
-  fg:        "#fafafa",
-  fgMuted:   "#a3a3a3",
-  fgFaint:   "#6f6f6f",
-  accent:    "#4d7cff",
-  onAccent:  "#ffffff",
-  danger:    "#f0553b",
-  warn:      "#f5a623",
-  ok:        "#4ade80",
+  bg:       "#0a0a0a",
+  surface:  "#0f0f0f",
+  card:     "#111318",
+  border:   "#262626",
+  fg:       "#fafafa",
+  fgMuted:  "#a3a3a3",
+  fgFaint:  "#6f6f6f",
+  accent:   "#4d7cff",
+  onAccent: "#ffffff",
+  danger:   "#f0553b",
 };
 const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
 
 // How long the table reveal plays before the verdict card appears
 const VERDICT_DELAY_MS = 2600;
-
+// Verdict card auto-dismisses after this (Continue still skips it early)
+const VERDICT_AUTO_MS = 3000;
 // How long an emote bubble stays on screen (bubble self-fades just before this)
 const EMOTE_VISIBLE_MS = 2450;
 
@@ -58,100 +58,6 @@ interface ChallengeResult {
   declared: Declaration;
   winnerUserId: string | null;
 }
-
-// ---------- Verdict modal ----------
-
-function VerdictModal({
-  data,
-  players,
-  onDismiss,
-}: {
-  data: ChallengeResolvedPayload;
-  players: Player[];
-  onDismiss: () => void;
-}) {
-  const loser = players.find((p) => p.userId === data.loserUserId);
-  const challenger = players.find((p) => p.userId === data.challengerUserId);
-  const actual = data.revealedRoll[0] * 10 + data.revealedRoll[1];
-  const honest = data.wasHonest;
-
-  return (
-    <View
-      style={{
-        position: "absolute",
-        top: 0, bottom: 0, left: 0, right: 0,
-        backgroundColor: "rgba(0,0,0,0.85)",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 200,
-        paddingHorizontal: 24,
-      }}
-    >
-      <View
-        style={{
-          backgroundColor: C.card,
-          borderRadius: 20,
-          padding: 28,
-          width: "100%",
-          maxWidth: 380,
-          alignItems: "center",
-          borderWidth: 1,
-          borderColor: C.border,
-        }}
-      >
-        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.fgFaint, textTransform: "uppercase", marginBottom: 10 }}>
-          The verdict
-        </Text>
-
-        <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1, color: honest ? C.ok : C.danger, marginBottom: 12 }}>
-          {honest ? "TRUTH." : "LIE."}
-        </Text>
-
-        <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, marginBottom: 18, textAlign: "center" }}>
-          {challenger?.displayName ?? "Someone"} pulled it.{"\n"}
-          Called {formatDeclaration(data.declared)} — rolled {formatDeclaration(actual)}.
-        </Text>
-
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
-          <DiceFace value={data.revealedRoll[0] as DieValue} size={68} />
-          <DiceFace value={data.revealedRoll[1] as DieValue} size={68} />
-        </View>
-
-        <View
-          style={{
-            backgroundColor: honest ? "rgba(74,222,128,0.09)" : "rgba(240,85,59,0.09)",
-            borderWidth: 1,
-            borderColor: honest ? "rgba(74,222,128,0.35)" : "rgba(240,85,59,0.35)",
-            borderRadius: 10,
-            paddingHorizontal: 16,
-            paddingVertical: 9,
-            marginBottom: 22,
-          }}
-        >
-          <Text style={{ fontFamily: MONO, color: honest ? C.ok : C.danger, fontWeight: "700", fontSize: 13, textAlign: "center" }}>
-            {loser?.displayName ?? "Someone"} loses {data.livesLost}{" "}
-            {data.livesLost === 1 ? "life" : "lives"}
-            {data.isEliminated ? " — eliminated" : ""}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          onPress={onDismiss}
-          style={{
-            backgroundColor: C.accent,
-            borderRadius: 10,
-            paddingVertical: 12,
-            paddingHorizontal: 44,
-          }}
-        >
-          <Text style={{ color: C.onAccent, fontWeight: "600", fontSize: 15 }}>Continue</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-// ---------- Main screen ----------
 
 export default function GameScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
@@ -186,6 +92,10 @@ export default function GameScreen() {
 
   const startingRef = useRef(false);
   const verdictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const verdictAutoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const verdictHandledRef = useRef(false);
+  // Mirror of revealData — the auto-dismiss timer fires from a stale closure
+  const revealDataRef = useRef<ChallengeResolvedPayload | null>(null);
   const emoteTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const emoteKeyRef = useRef(0);
 
@@ -195,6 +105,15 @@ export default function GameScreen() {
   const isMyTurn = currentTurnUserId === user?.id;
   const amIActive = myPlayer?.isActive ?? false;
   const canPullIt = isMyTurn && currentDeclaration != null && previousTurnUserId != null;
+
+  const tablePlayers: TablePlayer[] = [...gamePlayers]
+    .sort((a, b) => a.turnOrder - b.turnOrder)
+    .map((p) => ({
+      id: p.userId,
+      name: p.displayName,
+      lives: p.lives,
+      isActive: p.isActive,
+    }));
 
   // Initial setup
   useEffect(() => {
@@ -277,6 +196,7 @@ export default function GameScreen() {
 
     return () => {
       if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
+      if (verdictAutoRef.current) clearTimeout(verdictAutoRef.current);
       for (const t of Object.values(emoteTimersRef.current)) clearTimeout(t);
       unloadSounds();
       unsubscribeFromGame();
@@ -291,9 +211,11 @@ export default function GameScreen() {
     switch (lastEvent.type) {
       case "ROUND_STARTED": {
         if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
+        if (verdictAutoRef.current) clearTimeout(verdictAutoRef.current);
         setPeeking(false);
         setActionError(null);
         setRevealData(null);
+        revealDataRef.current = null;
         setShowVerdict(false);
         setChallengerName(null);
         setRoundKey((k) => k + 1);
@@ -315,9 +237,16 @@ export default function GameScreen() {
       // reveal: cup lifts aside, dice sit on the felt, then the verdict card drops.
       case "CHALLENGE_RESOLVED": {
         setRevealData(lastEvent.payload);
+        revealDataRef.current = lastEvent.payload;
         setChallengerName(null);
+        verdictHandledRef.current = false;
         if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
+        if (verdictAutoRef.current) clearTimeout(verdictAutoRef.current);
         verdictTimerRef.current = setTimeout(() => setShowVerdict(true), VERDICT_DELAY_MS);
+        verdictAutoRef.current = setTimeout(
+          () => dismissVerdict(),
+          VERDICT_DELAY_MS + VERDICT_AUTO_MS,
+        );
         break;
       }
 
@@ -490,16 +419,21 @@ export default function GameScreen() {
   }
 
   async function dismissVerdict() {
+    if (verdictHandledRef.current) return;
+    verdictHandledRef.current = true;
+    if (verdictAutoRef.current) clearTimeout(verdictAutoRef.current);
     setShowVerdict(false);
-    if (!revealData || !user) return;
+
+    const data = revealDataRef.current;
+    if (!data || !user) return;
 
     // Only the challenger drives the next round; everyone else just closes the card
-    const iAmChallenger = revealData.challengerUserId === user.id;
-    if (!iAmChallenger || winnerId) return;
+    const iAmChallenger = data.challengerUserId === user.id;
+    if (!iAmChallenger || useStore.getState().winnerId) return;
 
     // The player after the one who lost a life opens the next round
     const { gamePlayers: latest } = useStore.getState();
-    const starter = nextActivePlayer(latest, revealData.loserUserId).userId;
+    const starter = nextActivePlayer(latest, data.loserUserId).userId;
     await startNextRound(starter);
   }
 
@@ -537,14 +471,23 @@ export default function GameScreen() {
     );
   }
 
+  const loserName = gamePlayers.find((p) => p.userId === revealData?.loserUserId)?.displayName ?? "Someone";
+  const revealChallengerName =
+    gamePlayers.find((p) => p.userId === revealData?.challengerUserId)?.displayName ?? "Someone";
+
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {/* ── Verdict overlay ── */}
+      {/* ── Verdict sheet ── */}
       {showVerdict && revealData && (
-        <VerdictModal
-          data={revealData}
-          players={gamePlayers}
-          onDismiss={dismissVerdict}
+        <VerdictSheet
+          wasHonest={revealData.wasHonest}
+          challengerName={revealChallengerName}
+          loserName={loserName}
+          livesLost={revealData.livesLost}
+          isEliminated={revealData.isEliminated}
+          revealedRoll={revealData.revealedRoll as Roll}
+          declared={revealData.declared}
+          onContinue={dismissVerdict}
         />
       )}
 
@@ -560,9 +503,9 @@ export default function GameScreen() {
         >
           <View
             style={{
-              backgroundColor: C.card, borderRadius: 20, padding: 32,
+              backgroundColor: C.card, borderRadius: 22, padding: 32,
               width: "100%", maxWidth: 380, alignItems: "center",
-              borderWidth: 1, borderColor: C.border,
+              borderWidth: 1, borderColor: "#22242a",
             }}
           >
             <Text style={{ fontSize: 48, marginBottom: 10 }}>🏆</Text>
@@ -643,19 +586,18 @@ export default function GameScreen() {
 
       {/* ── Table ── */}
       <View>
-        <GameTable
-          players={gamePlayers}
-          myUserId={user?.id ?? ""}
-          currentTurnUserId={currentTurnUserId}
-          previousTurnUserId={previousTurnUserId}
-          currentDeclaration={currentDeclaration}
-          flashUserId={flashUserId}
-          myActualRoll={myActualRoll}
+        <GameTable2
+          players={tablePlayers}
+          myId={user?.id ?? ""}
+          currentId={currentTurnUserId}
+          prevId={previousTurnUserId}
+          callValue={currentDeclaration}
+          flashId={flashUserId}
+          myRoll={myActualRoll}
           peeking={peeking}
           isRolling={isRolling}
           onTogglePeek={() => setPeeking((p) => !p)}
-          isMyTurn={isMyTurn}
-          phase={phase}
+          cupInteractive={isMyTurn && phase === "my_turn_declare"}
           revealRoll={revealData ? (revealData.revealedRoll as Roll) : null}
           emotes={activeEmotes}
         />
@@ -664,7 +606,7 @@ export default function GameScreen() {
 
       {/* ── Declaration input — right below the table ── */}
       {phase === "my_turn_declare" && isMyTurn && amIActive && !revealData && (
-        <View style={{ marginTop: 4 }}>
+        <View style={{ marginTop: 2 }}>
           <DeclarationInput
             key={roundKey}
             currentDeclaration={currentDeclaration}
@@ -674,7 +616,7 @@ export default function GameScreen() {
       )}
 
       {/* ── Action panel ── */}
-      <View style={{ paddingHorizontal: 16, paddingBottom: 32, marginTop: "auto" }}>
+      <View style={{ paddingHorizontal: 20, paddingBottom: 34, marginTop: "auto" }}>
         {actionError && (
           <Text style={{ fontFamily: MONO, color: C.danger, fontSize: 12, textAlign: "center", marginBottom: 8 }}>
             {actionError}
@@ -685,8 +627,8 @@ export default function GameScreen() {
         {!amIActive && phase !== "game_over" && (
           <View
             style={{
-              backgroundColor: C.surface, borderRadius: 12, padding: 16,
-              alignItems: "center", borderWidth: 1, borderColor: C.border,
+              backgroundColor: C.surface, borderRadius: 14, padding: 16,
+              alignItems: "center", borderWidth: 1, borderColor: "#1d1f24",
             }}
           >
             <Text style={{ fontFamily: MONO, color: C.fgFaint, fontSize: 12 }}>
@@ -716,8 +658,8 @@ export default function GameScreen() {
         {amIActive && phase === "others_turn" && currentPlayer && (
           <View
             style={{
-              backgroundColor: C.surface, borderRadius: 12, padding: 14,
-              alignItems: "center", borderWidth: 1, borderColor: C.border,
+              backgroundColor: C.surface, borderRadius: 14, padding: 14,
+              alignItems: "center", borderWidth: 1, borderColor: "#1d1f24",
             }}
           >
             <Text style={{ fontFamily: MONO, color: C.fgFaint, fontSize: 12 }}>
@@ -750,23 +692,23 @@ export default function GameScreen() {
               {canPullIt && (
                 <TouchableOpacity
                   style={{
-                    flex: 1, borderRadius: 10, paddingVertical: 14, alignItems: "center",
-                    borderWidth: 1.5, borderColor: C.danger, backgroundColor: "transparent",
+                    flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: "center",
+                    borderWidth: 1.5, borderColor: C.danger,
                   }}
                   onPress={handlePullIt}
                 >
-                  <Text style={{ color: C.danger, fontWeight: "700", fontSize: 14 }}>Pull It</Text>
+                  <Text style={{ color: C.danger, fontWeight: "700", fontSize: 15 }}>Pull It</Text>
                   <Text style={{ fontFamily: MONO, color: C.fgFaint, fontSize: 9, marginTop: 2 }}>call the bluff</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
                 style={{
-                  flex: 1, borderRadius: 10, paddingVertical: 14,
+                  flex: 1, borderRadius: 14, paddingVertical: 16,
                   alignItems: "center", backgroundColor: C.accent,
                 }}
                 onPress={handleRoll}
               >
-                <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 14 }}>Roll</Text>
+                <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 15 }}>Roll</Text>
                 <Text style={{ fontFamily: MONO, color: "rgba(255,255,255,0.6)", fontSize: 9, marginTop: 2 }}>
                   {currentDeclaration != null ? `then beat ${formatDeclaration(currentDeclaration)}` : "open the round"}
                 </Text>

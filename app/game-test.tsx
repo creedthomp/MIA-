@@ -8,21 +8,18 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
 import { GameTable2 } from "@/components/game2/GameTable2";
-import { Die } from "@/components/game2/Die";
+import { VerdictSheet } from "@/components/game2/VerdictSheet";
 import type { TablePlayer } from "@/components/game2/PlayerPlaque";
 import { DeclarationInput } from "@/components/game/DeclarationInput";
+import { EmotePicker } from "@/components/game/EmotePicker";
+import { playEmotePop } from "@/services/sounds";
 import { rollDice, rollToDeclaration } from "@/utils/dice";
 import { getRank } from "@/utils/rollHierarchy";
 import { resolveChallenge } from "@/utils/challenge";
 import { ALL_DECLARATIONS, formatDeclaration } from "@/utils/declarations";
-import type { Declaration, DieValue, Roll } from "@/types/game";
+import type { Declaration, Roll } from "@/types/game";
+import type { EmoteId } from "@/types/realtimeEvents";
 
 const C = {
   bg:       "#0a0a0a",
@@ -121,101 +118,6 @@ function minAbove(call: Declaration): Declaration | null {
   return RANKED.find((d) => getRank(d) > getRank(call)) ?? null;
 }
 
-// ---------- Verdict sheet ----------
-
-function VerdictSheet({ verdict, players, onContinue }: {
-  verdict: Verdict;
-  players: TablePlayer[];
-  onContinue: () => void;
-}) {
-  const slide = useSharedValue(320);
-  const scrim = useSharedValue(0);
-
-  useEffect(() => {
-    slide.value = withSpring(0, { damping: 20, stiffness: 160 });
-    scrim.value = withTiming(1, { duration: 250 });
-  }, []);
-
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: slide.value }] }));
-  const scrimStyle = useAnimatedStyle(() => ({ opacity: scrim.value }));
-
-  const honest = verdict.wasHonest;
-  const loser = players.find((p) => p.id === verdict.loserId);
-  const challenger = players.find((p) => p.id === verdict.challengerId);
-  const actual = rollToDeclaration(verdict.revealedRoll);
-
-  return (
-    <View style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 200 }}>
-      <Animated.View
-        style={[scrimStyle, { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.72)" }]}
-      />
-      <Animated.View
-        style={[
-          sheetStyle,
-          {
-            position: "absolute",
-            bottom: 0, left: 0, right: 0,
-            backgroundColor: C.card,
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
-            borderWidth: 1,
-            borderColor: "#22242a",
-            paddingTop: 14,
-            paddingBottom: 40,
-            paddingHorizontal: 28,
-            alignItems: "center",
-          },
-        ]}
-      >
-        <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "#2c2e34", marginBottom: 20 }} />
-
-        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.fgFaint, textTransform: "uppercase", marginBottom: 8 }}>
-          The verdict
-        </Text>
-        <Text style={{ fontSize: 38, fontWeight: "800", letterSpacing: -1, color: honest ? C.ok : C.danger, marginBottom: 10 }}>
-          {honest ? "TRUTH." : "LIE."}
-        </Text>
-        <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, marginBottom: 20, textAlign: "center", lineHeight: 18 }}>
-          {challenger?.name ?? "Someone"} pulled it.{"\n"}
-          Called {formatDeclaration(verdict.declared)} — rolled {formatDeclaration(actual)}.
-        </Text>
-
-        <View style={{ flexDirection: "row", gap: 14, marginBottom: 22 }}>
-          <Die value={verdict.revealedRoll[0] as DieValue} size={62} />
-          <Die value={verdict.revealedRoll[1] as DieValue} size={62} />
-        </View>
-
-        <View
-          style={{
-            backgroundColor: honest ? "rgba(74,222,128,0.08)" : "rgba(240,85,59,0.08)",
-            borderWidth: 1,
-            borderColor: honest ? "rgba(74,222,128,0.3)" : "rgba(240,85,59,0.3)",
-            borderRadius: 10,
-            paddingHorizontal: 18,
-            paddingVertical: 9,
-            marginBottom: 24,
-          }}
-        >
-          <Text style={{ fontFamily: MONO, color: honest ? C.ok : C.danger, fontWeight: "700", fontSize: 13 }}>
-            {loser?.name ?? "Someone"} loses {verdict.livesLost} {verdict.livesLost === 1 ? "life" : "lives"}
-            {verdict.isEliminated ? " — out" : ""}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          onPress={onContinue}
-          style={{
-            backgroundColor: C.accent, borderRadius: 12,
-            paddingVertical: 14, alignItems: "center", alignSelf: "stretch",
-          }}
-        >
-          <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 15 }}>Continue</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
-  );
-}
-
 // ---------- Screen ----------
 
 export default function GameTestScreen() {
@@ -224,6 +126,9 @@ export default function GameTestScreen() {
   const g = gRef.current;
   const [, forceRender] = useState(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [activeEmotes, setActiveEmotes] = useState<Record<string, { emote: EmoteId; key: number }>>({});
+  const emoteKeyRef = useRef(0);
+  const emoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sync = () => forceRender((x) => x + 1);
 
@@ -238,7 +143,10 @@ export default function GameTestScreen() {
 
   useEffect(() => {
     after(900, () => startTurn("nova"));
-    return clearTimers;
+    return () => {
+      clearTimers();
+      if (emoteTimerRef.current) clearTimeout(emoteTimerRef.current);
+    };
   }, []);
 
   // ---------- Engine ----------
@@ -337,6 +245,12 @@ export default function GameTestScreen() {
       };
       g.phase = "verdict";
       sync();
+
+      // Auto-dismiss after 3s (Continue still skips it early)
+      const shown = g.verdict;
+      after(3000, () => {
+        if (g.verdict === shown) dismissVerdict();
+      });
     });
   }
 
@@ -379,6 +293,14 @@ export default function GameTestScreen() {
   }
 
   // ---------- My actions ----------
+
+  function sendEmote(emote: EmoteId) {
+    playEmotePop();
+    emoteKeyRef.current += 1;
+    setActiveEmotes({ me: { emote, key: emoteKeyRef.current } });
+    if (emoteTimerRef.current) clearTimeout(emoteTimerRef.current);
+    emoteTimerRef.current = setTimeout(() => setActiveEmotes({}), 2450);
+  }
 
   function handleRoll() {
     g.isRolling = true;
@@ -438,7 +360,16 @@ export default function GameTestScreen() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {/* Verdict sheet */}
       {g.phase === "verdict" && g.verdict && (
-        <VerdictSheet verdict={g.verdict} players={g.players} onContinue={dismissVerdict} />
+        <VerdictSheet
+          wasHonest={g.verdict.wasHonest}
+          challengerName={g.players.find((p) => p.id === g.verdict!.challengerId)?.name ?? "Someone"}
+          loserName={g.players.find((p) => p.id === g.verdict!.loserId)?.name ?? "Someone"}
+          livesLost={g.verdict.livesLost}
+          isEliminated={g.verdict.isEliminated}
+          revealedRoll={g.verdict.revealedRoll}
+          declared={g.verdict.declared}
+          onContinue={dismissVerdict}
+        />
       )}
 
       {/* Game over */}
@@ -498,21 +429,25 @@ export default function GameTestScreen() {
       </SafeAreaView>
 
       {/* Table */}
-      <GameTable2
-        players={g.players}
-        myId="me"
-        currentId={g.currentId}
-        prevId={g.prevId}
-        callValue={g.call}
-        flashId={g.flashId}
-        myRoll={g.myRoll}
-        peeking={g.peeking}
-        isRolling={g.isRolling}
-        onTogglePeek={() => { g.peeking = !g.peeking; sync(); }}
-        cupInteractive={g.phase === "my_declare"}
-        revealRoll={g.revealRoll}
-        cupTint={g.cupTint}
-      />
+      <View>
+        <GameTable2
+          players={g.players}
+          myId="me"
+          currentId={g.currentId}
+          prevId={g.prevId}
+          callValue={g.call}
+          flashId={g.flashId}
+          myRoll={g.myRoll}
+          peeking={g.peeking}
+          isRolling={g.isRolling}
+          onTogglePeek={() => { g.peeking = !g.peeking; sync(); }}
+          cupInteractive={g.phase === "my_declare"}
+          revealRoll={g.revealRoll}
+          cupTint={g.cupTint}
+          emotes={activeEmotes}
+        />
+        <EmotePicker onSend={sendEmote} />
+      </View>
 
       {/* Declare input */}
       {g.phase === "my_declare" && (

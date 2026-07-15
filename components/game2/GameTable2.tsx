@@ -12,8 +12,10 @@ import Animated, {
 import { DiceCup, CUP_W, CUP_AREA_H } from "./DiceCup";
 import { Die } from "./Die";
 import { PlayerPlaque, type TablePlayer } from "./PlayerPlaque";
+import { EmoteBubble } from "@/components/game/EmoteBubble";
 import { formatDeclaration } from "@/utils/declarations";
 import type { Declaration, Roll, DieValue } from "@/types/game";
+import type { EmoteId } from "@/types/realtimeEvents";
 
 const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
 
@@ -43,6 +45,7 @@ interface GameTable2Props {
   cupInteractive: boolean;
   revealRoll: Roll | null;
   cupTint?: string;
+  emotes?: Record<string, { emote: EmoteId; key: number }>; // active emote bubble per player id
 }
 
 export function GameTable2({
@@ -59,37 +62,46 @@ export function GameTable2({
   cupInteractive,
   revealRoll,
   cupTint,
+  emotes,
 }: GameTable2Props) {
   const { width, height } = useWindowDimensions();
 
-  // Table radius — sized so plaques always fit on screen and the felt
-  // has room for the cup pad well inside the rim
-  const R = Math.max(104, Math.min(width / 2 - 82, height * 0.225, 185));
+  // Stadium-shaped table: Rx/Ry are the horizontal/vertical semi-axes.
+  // Ry keeps enough headroom that a cup on the far pad clears the top seat;
+  // Rx stretches toward the screen edges for the oval look.
+  const Rx = Math.max(120, Math.min(width / 2 - 40, 300));
+  const Ry = Math.max(100, Math.min(height * 0.26, Rx * 0.78, 190));
   const cx = width / 2;
-  const cy = R + 115;
-  const TABLE_H = 2 * R + 230;
+  const cy = Ry + 115;
+  const TABLE_H = 2 * Ry + 230;
 
   const n = players.length;
   const myIdx = Math.max(0, players.findIndex((p) => p.id === myId));
 
-  // Seat angles — me at the bottom, others clockwise by turn order
+  // Seat angles — me at the bottom, others clockwise by turn order.
+  // Side and bottom seats hug the rail (poker-app style); only the top
+  // seat sits fully outside, since the cup's body reaches up toward it.
   const seatMap: Record<string, { x: number; y: number; angle: number }> = {};
   players.forEach((p, i) => {
     const rotated = (i - myIdx + n) % n;
     const angle = Math.PI / 2 + (2 * Math.PI * rotated) / n;
+    const sin = Math.sin(angle);
     seatMap[p.id] = {
-      x: cx + (R + 34) * Math.cos(angle),
-      y: cy + (R + 56) * Math.sin(angle),
+      x: cx + (Rx - 2) * Math.cos(angle),
+      y: cy + (Ry + (sin > 0 ? 20 : 56)) * sin,
       angle,
     };
   });
 
-  // Cup pad — well inside the felt so cup + dice never touch the seats
-  const PAD_R = R * 0.56;
+  // Cup pads — pulled close to each seat (fixed max distance so big tables
+  // don't strand the cup mid-felt) but always fully on the felt
   function padFor(angle: number) {
+    const sin = Math.sin(angle);
+    const px = Math.max(Rx * 0.56, Rx - 90);
+    const py = sin > 0 ? Math.max(Ry * 0.56, Ry - 52) : Ry * 0.56;
     return {
-      x: cx + PAD_R * Math.cos(angle),
-      y: cy + PAD_R * Math.sin(angle),
+      x: cx + px * Math.cos(angle),
+      y: cy + py * sin,
     };
   }
 
@@ -120,7 +132,7 @@ export function GameTable2({
       const dx = cx - pad.x;
       const dy = cy - pad.y;
       const len = Math.max(1, Math.hypot(dx, dy));
-      const carry = R * 0.52;
+      const carry = Ry * 0.52;
 
       revealLift.value = withSequence(
         withTiming(-100, { duration: 400, easing: Easing.out(Easing.cubic) }),
@@ -169,11 +181,11 @@ export function GameTable2({
       <View
         style={{
           position: "absolute",
-          left: cx - R - 14,
-          top: cy - R - 14,
-          width: (R + 14) * 2,
-          height: (R + 14) * 2,
-          borderRadius: R + 14,
+          left: cx - Rx - 14,
+          top: cy - Ry - 14,
+          width: (Rx + 14) * 2,
+          height: (Ry + 14) * 2,
+          borderRadius: Ry + 14,
           backgroundColor: C.rail,
           borderWidth: 1,
           borderColor: C.railEdge,
@@ -189,34 +201,37 @@ export function GameTable2({
       <View
         style={{
           position: "absolute",
-          left: cx - R,
-          top: cy - R,
-          width: R * 2,
-          height: R * 2,
-          borderRadius: R,
+          left: cx - Rx,
+          top: cy - Ry,
+          width: Rx * 2,
+          height: Ry * 2,
+          borderRadius: Ry,
           backgroundColor: C.felt,
           borderWidth: 1,
           borderColor: "#20232a",
         }}
       />
 
-      {/* Concentric felt rings */}
-      {[0.72, 0.45].map((f) => (
-        <View
-          key={f}
-          style={{
-            position: "absolute",
-            left: cx - R * f,
-            top: cy - R * f,
-            width: R * f * 2,
-            height: R * f * 2,
-            borderRadius: R * f,
-            borderWidth: 1,
-            borderColor: C.feltRing,
-          }}
-          pointerEvents="none"
-        />
-      ))}
+      {/* Inset racetrack lines */}
+      {[0.28, 0.55].map((f) => {
+        const inset = Ry * f;
+        return (
+          <View
+            key={f}
+            style={{
+              position: "absolute",
+              left: cx - (Rx - inset),
+              top: cy - (Ry - inset),
+              width: (Rx - inset) * 2,
+              height: (Ry - inset) * 2,
+              borderRadius: Ry - inset,
+              borderWidth: 1,
+              borderColor: C.feltRing,
+            }}
+            pointerEvents="none"
+          />
+        );
+      })}
 
       {/* Center — the call to beat */}
       <View
@@ -244,11 +259,11 @@ export function GameTable2({
         <View
           style={{
             position: "absolute",
-            left: pad.x - 46,
-            top: pad.y - 46,
-            width: 92,
-            height: 92,
-            borderRadius: 46,
+            left: pad.x - 42,
+            top: pad.y - 42,
+            width: 84,
+            height: 84,
+            borderRadius: 42,
             backgroundColor: "rgba(0,0,0,0.25)",
             borderWidth: 1,
             borderColor: "rgba(255,255,255,0.03)",
@@ -308,6 +323,23 @@ export function GameTable2({
           />
         );
       })}
+
+      {/* Emote bubbles — keyed so a repeat taunt re-pops */}
+      {emotes &&
+        players.map((p) => {
+          const active = emotes[p.id];
+          if (!active) return null;
+          const seat = seatMap[p.id];
+          return (
+            <EmoteBubble
+              key={`${p.id}-${active.key}`}
+              emote={active.emote}
+              anchorX={seat.x}
+              anchorY={seat.y}
+              onRight={seat.x > cx}
+            />
+          );
+        })}
     </View>
   );
 }
