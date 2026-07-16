@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -13,8 +13,10 @@ import Animated, {
 import { Die } from "./Die";
 import type { DieValue, Roll } from "@/types/game";
 
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
-const ACCENT = "#4d7cff";
+import { COLORS, FONT } from "@/theme";
+
+const MONO = FONT.brand;
+const ACCENT = COLORS.accent;
 
 export const CUP_W = 68;
 export const CUP_AREA_H = 118;
@@ -164,7 +166,7 @@ export function DiceCup({
               width: 104,
               height: 26,
               borderRadius: 52,
-              backgroundColor: "rgba(77,124,255,0.10)",
+              backgroundColor: "rgba(29,182,187,0.10)",
             }}
           />
           <View
@@ -174,7 +176,7 @@ export function DiceCup({
               width: 86,
               height: 18,
               borderRadius: 43,
-              backgroundColor: "rgba(77,124,255,0.16)",
+              backgroundColor: "rgba(29,182,187,0.16)",
             }}
           />
         </>

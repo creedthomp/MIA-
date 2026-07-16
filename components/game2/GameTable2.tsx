@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, Platform, useWindowDimensions } from "react-native";
+import { View, Text, useWindowDimensions } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,17 +17,10 @@ import { formatDeclaration } from "@/utils/declarations";
 import type { Declaration, Roll, DieValue } from "@/types/game";
 import type { EmoteId } from "@/types/realtimeEvents";
 
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
 
-const C = {
-  fg:       "#fafafa",
-  fgFaint:  "#6f6f6f",
-  accent:   "#4d7cff",
-  felt:     "#14171c",
-  feltRing: "rgba(255,255,255,0.035)",
-  rail:     "#1a1c20",
-  railEdge: "#26282c",
-};
+const MONO = FONT.brand;
+const C = COLORS;
 
 const REVEAL_DIE = 32;
 

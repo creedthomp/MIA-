@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, Platform } from "react-native";
+import { View, Text } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,17 +10,10 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
 
-const C = {
-  fg:      "#fafafa",
-  fgMuted: "#a3a3a3",
-  fgFaint: "#6f6f6f",
-  accent:  "#4d7cff",
-  danger:  "#f0553b",
-  card:    "#191b20",
-  edge:    "#2b2d31",
-};
+const MONO = FONT.brand;
+const C = COLORS;
 
 export const PLAQUE_W = 78;
 const AVATAR = 46;
@@ -150,7 +143,7 @@ export function PlayerPlaque({
           width: AVATAR,
           height: AVATAR,
           borderRadius: AVATAR / 2,
-          backgroundColor: isCurrent ? "#151f38" : C.card,
+          backgroundColor: isCurrent ? "#0e2b2c" : C.card,
           borderWidth: 1.5,
           borderColor: isCurrent ? C.accent : isMe ? "#575b63" : C.edge,
           alignItems: "center",

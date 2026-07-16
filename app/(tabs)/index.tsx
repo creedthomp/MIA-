@@ -22,26 +22,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 
+import { COLORS, FONT } from "@/theme";
+
 // ── Design tokens ──────────────────────────────────────────────
-const C = {
-  bg:        "#0a0a0a",
-  surface:   "#0f0f0f",
-  surface2:  "#151515",
-  elevated:  "#1a1a1a",
-  border:    "#262626",
-  borderSoft:"#1c1c1c",
-  fg:        "#fafafa",
-  fgMuted:   "#a3a3a3",
-  fgFaint:   "#6f6f6f",
-  accent:    "#4d7cff",
-  onAccent:  "#ffffff",
-  feltA:     "#1d2023",
-  feltB:     "#141618",
-  feltBorder:"#2b2f33",
-  success:   "#3fb950",
-  danger:    "#f0553b",
-};
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+const C = COLORS;
+const MONO = FONT.brand;
 // ───────────────────────────────────────────────────────────────
 
 // ── Interactive die ───────────────────────────────────────────

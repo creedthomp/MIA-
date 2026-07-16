@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, Platform } from "react-native";
+import { View, Text } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,7 +12,9 @@ import Animated, {
 import { EMOTES } from "@/utils/emotes";
 import type { EmoteId } from "@/types/realtimeEvents";
 
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { FONT } from "@/theme";
+
+const MONO = FONT.brand;
 
 // Keep in sync with EMOTE_VISIBLE_MS in the game screen (bubble starts
 // fading ~350ms before the screen removes it)

@@ -21,20 +21,10 @@ import { ALL_DECLARATIONS, formatDeclaration } from "@/utils/declarations";
 import type { Declaration, Roll } from "@/types/game";
 import type { EmoteId } from "@/types/realtimeEvents";
 
-const C = {
-  bg:       "#0a0a0a",
-  surface:  "#0f0f0f",
-  card:     "#111318",
-  border:   "#262626",
-  fg:       "#fafafa",
-  fgMuted:  "#a3a3a3",
-  fgFaint:  "#6f6f6f",
-  accent:   "#4d7cff",
-  onAccent: "#ffffff",
-  danger:   "#f0553b",
-  ok:       "#4ade80",
-};
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
+
+const C = COLORS;
+const MONO = FONT.brand;
 
 const REVEAL_MS = 2400;
 

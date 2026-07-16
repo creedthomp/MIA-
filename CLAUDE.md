@@ -118,10 +118,10 @@ DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" SUPABASE_ACCESS_TOKEN=loc
 ## Code Style & Conventions
 
 - TypeScript strict mode — no `any`
-- Inline `style` objects with a `C` design token constant at the top of each file — no `className` props
-- `const MONO = Platform.OS === "ios" ? "Courier New" : "monospace"` for monospace font
+- Inline `style` objects — no `className` props
+- Colors + type come from [`theme.ts`](theme.ts) (the design system). Each file aliases them at the top: `const C = COLORS;` and `const MONO = FONT.brand;`. Never hardcode hex — add/adjust tokens in `theme.ts`. See [`design.md`](design.md) for the palette and fonts.
 - One component per file, named exports
-- Zustand slices per domain: `game`, `auth`, `ui`
+- Zustand slices per domain: `game`, `auth`, `ui`, `settings`
 - Supabase types generated via CLI and committed — never manually maintained
 
 ---
