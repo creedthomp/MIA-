@@ -1,26 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View, SafeAreaView, Platform } from "react-native";
+import { ActivityIndicator, Text, TouchableOpacity, View, SafeAreaView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/services/supabase";
 import { useStore } from "@/services/store";
 import { startGame } from "@/services/roomService";
 
-const C = {
-  bg:        "#0a0a0a",
-  surface:   "#0f0f0f",
-  surface2:  "#151515",
-  border:    "#262626",
-  borderSoft:"#1c1c1c",
-  fg:        "#fafafa",
-  fgMuted:   "#a3a3a3",
-  fgFaint:   "#6f6f6f",
-  accent:    "#4d7cff",
-  onAccent:  "#ffffff",
-  success:   "#3fb950",
-  danger:    "#f0553b",
-};
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
+
+const C = COLORS;
+const MONO = FONT.brand;
 
 type Room = {
   id: string;

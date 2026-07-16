@@ -18,21 +18,10 @@ import { useStore } from "@/services/store";
 import { supabase } from "@/services/supabase";
 import { createRoom, joinByCode, findOrJoinQuickMatch } from "@/services/roomService";
 
-const C = {
-  bg:        "#0a0a0a",
-  surface:   "#0f0f0f",
-  surface2:  "#151515",
-  border:    "#262626",
-  borderSoft:"#1c1c1c",
-  fg:        "#fafafa",
-  fgMuted:   "#a3a3a3",
-  fgFaint:   "#6f6f6f",
-  accent:    "#4d7cff",
-  onAccent:  "#ffffff",
-  success:   "#3fb950",
-  danger:    "#f0553b",
-};
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
+
+const C = COLORS;
+const MONO = FONT.brand;
 
 type Tab = "play" | "rules" | "leaderboard" | "settings";
 

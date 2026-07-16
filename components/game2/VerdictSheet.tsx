@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,17 +11,10 @@ import { formatDeclaration } from "@/utils/declarations";
 import { rollToDeclaration } from "@/utils/dice";
 import type { Declaration, DieValue, Roll } from "@/types/game";
 
-const C = {
-  card:     "#111318",
-  fg:       "#fafafa",
-  fgMuted:  "#a3a3a3",
-  fgFaint:  "#6f6f6f",
-  accent:   "#4d7cff",
-  onAccent: "#ffffff",
-  danger:   "#f0553b",
-  ok:       "#4ade80",
-};
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
+
+const C = COLORS;
+const MONO = FONT.brand;
 
 interface VerdictSheetProps {
   wasHonest: boolean;
@@ -100,9 +93,9 @@ export function VerdictSheet({
 
         <View
           style={{
-            backgroundColor: wasHonest ? "rgba(74,222,128,0.08)" : "rgba(240,85,59,0.08)",
+            backgroundColor: wasHonest ? "rgba(29,182,187,0.09)" : "rgba(222,26,98,0.09)",
             borderWidth: 1,
-            borderColor: wasHonest ? "rgba(74,222,128,0.3)" : "rgba(240,85,59,0.3)",
+            borderColor: wasHonest ? "rgba(29,182,187,0.32)" : "rgba(222,26,98,0.32)",
             borderRadius: 10,
             paddingHorizontal: 18,
             paddingVertical: 9,

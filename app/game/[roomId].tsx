@@ -26,19 +26,10 @@ import { EmotePicker } from "@/components/game/EmotePicker";
 import type { Player, Declaration, Roll } from "@/types/game";
 import type { ChallengeResolvedPayload, EmoteId } from "@/types/realtimeEvents";
 
-const C = {
-  bg:       "#0a0a0a",
-  surface:  "#0f0f0f",
-  card:     "#111318",
-  border:   "#262626",
-  fg:       "#fafafa",
-  fgMuted:  "#a3a3a3",
-  fgFaint:  "#6f6f6f",
-  accent:   "#4d7cff",
-  onAccent: "#ffffff",
-  danger:   "#f0553b",
-};
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
+
+const C = COLORS;
+const MONO = FONT.brand;
 
 // How long the table reveal plays before the verdict card appears
 const VERDICT_DELAY_MS = 2600;

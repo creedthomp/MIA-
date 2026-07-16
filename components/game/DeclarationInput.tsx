@@ -1,22 +1,13 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { ALL_DECLARATIONS, formatDeclaration } from "@/utils/declarations";
 import { getRank } from "@/utils/rollHierarchy";
 import type { Declaration } from "@/types/game";
 
-const C = {
-  surface:  "#0f0f0f",
-  border:   "#262626",
-  fg:       "#fafafa",
-  fgMuted:  "#a3a3a3",
-  fgFaint:  "#6f6f6f",
-  accent:   "#4d7cff",
-  onAccent: "#ffffff",
-  danger:   "#f0553b",
-  warn:     "#f5a623",
-  ok:       "#4ade80",
-};
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
+
+const C = COLORS;
+const MONO = FONT.brand;
 
 interface Props {
   currentDeclaration: Declaration | null;

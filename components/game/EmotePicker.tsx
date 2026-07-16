@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,14 +9,10 @@ import Animated, {
 import { EMOTES, EMOTE_IDS } from "@/utils/emotes";
 import type { EmoteId } from "@/types/realtimeEvents";
 
-const C = {
-  surface: "#0f0f0f",
-  border:  "#262626",
-  fg:      "#fafafa",
-  fgMuted: "#a3a3a3",
-  fgFaint: "#6f6f6f",
-};
-const MONO = Platform.OS === "ios" ? "Courier New" : "monospace";
+import { COLORS, FONT } from "@/theme";
+
+const C = COLORS;
+const MONO = FONT.brand;
 
 const COOLDOWN_MS = 4000;
 
