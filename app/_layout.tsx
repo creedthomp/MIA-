@@ -2,9 +2,20 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as SplashScreen from "expo-splash-screen";
+import {
+  useFonts,
+  Poppins_300Light,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from "@expo-google-fonts/poppins";
 import { supabase } from "@/services/supabase";
 import { useStore } from "@/services/store";
 import { fetchProfile } from "@/services/authService";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AuthGuard() {
   const router = useRouter();
@@ -45,6 +56,20 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Poppins_300Light,
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaProvider>
       <AuthGuard />
