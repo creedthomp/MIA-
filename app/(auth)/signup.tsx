@@ -120,8 +120,8 @@ function BrandPanel() {
       <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 5, textTransform: "uppercase", color: C.accent, marginBottom: 14 }}>
         The dice bluffing game
       </Text>
-      <Text style={{ fontSize: 28, fontWeight: "700", color: "#f2f4f6", letterSpacing: -1, textAlign: "center", lineHeight: 34 }}>
-        Roll. Bluff. Win.
+      <Text style={{ fontSize: 28, fontWeight: "700", letterSpacing: -1, textAlign: "center", lineHeight: 34 }}>
+        <Text style={{ color: C.accent }}>Roll.</Text> <Text style={{ color: C.secondary }}>Bluff.</Text> <Text style={{ color: C.warn }}>Win.</Text>
       </Text>
     </View>
   );
@@ -229,14 +229,14 @@ function SignupForm({ compact }: { compact?: boolean }) {
         disabled={googleLoading || loading}
         style={{
           flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10,
-          backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border,
+          backgroundColor: "transparent", borderWidth: 1.5, borderColor: C.secondary,
           borderRadius: 10, paddingVertical: 13, opacity: googleLoading ? 0.7 : 1,
         }}
       >
-        {googleLoading ? <ActivityIndicator color={C.fgMuted} /> : (
+        {googleLoading ? <ActivityIndicator color={C.secondary} /> : (
           <>
-            <Ionicons name="logo-google" size={17} color={C.fg} />
-            <Text style={{ color: C.fg, fontWeight: "600", fontSize: 14 }}>Continue with Google</Text>
+            <Ionicons name="logo-google" size={17} color={C.secondary} />
+            <Text style={{ color: C.secondary, fontWeight: "600", fontSize: 14 }}>Continue with Google</Text>
           </>
         )}
       </TouchableOpacity>

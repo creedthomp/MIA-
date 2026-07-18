@@ -348,6 +348,13 @@ export default function PlayScreen() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <SafeAreaView style={{ flex: 1 }}>
 
+        {/* ── Color-block strip ── */}
+        <View style={{ flexDirection: "row", height: 4 }}>
+          <View style={{ flex: 1, backgroundColor: C.accent }} />
+          <View style={{ flex: 1, backgroundColor: C.secondary }} />
+          <View style={{ flex: 1, backgroundColor: C.warn }} />
+        </View>
+
         {/* ── Header ── */}
         <View style={{
           flexDirection: "row", alignItems: "center",
@@ -404,13 +411,13 @@ export default function PlayScreen() {
                   onPress={handleQuickMatch}
                   disabled={!!loading}
                   style={{
-                    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+                    flex: 1, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.secondary,
                     borderRadius: 14, padding: isWide ? 22 : 18, opacity: loading ? 0.65 : 1,
                   }}
                 >
-                  {loading === "quick" ? <ActivityIndicator color={C.fg} /> : (
+                  {loading === "quick" ? <ActivityIndicator color={C.secondary} /> : (
                     <>
-                      <Text style={{ fontSize: 17, fontWeight: "600", color: C.fg, marginBottom: 6 }}>Quick Match</Text>
+                      <Text style={{ fontSize: 17, fontWeight: "600", color: C.secondary, marginBottom: 6 }}>Quick Match</Text>
                       <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Jump into a random open table</Text>
                     </>
                   )}
@@ -420,11 +427,11 @@ export default function PlayScreen() {
                   onPress={() => { setHomeError(null); setJoinModalVisible(true); }}
                   disabled={!!loading}
                   style={{
-                    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+                    flex: 1, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.secondary,
                     borderRadius: 14, padding: isWide ? 22 : 18, opacity: loading ? 0.65 : 1,
                   }}
                 >
-                  <Text style={{ fontSize: 17, fontWeight: "600", color: C.fg, marginBottom: 6 }}>Join with Code</Text>
+                  <Text style={{ fontSize: 17, fontWeight: "600", color: C.secondary, marginBottom: 6 }}>Join with Code</Text>
                   <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Enter the 6-character room code</Text>
                 </TouchableOpacity>
               </View>
@@ -434,11 +441,11 @@ export default function PlayScreen() {
                 onPress={() => router.push("/game-test" as never)}
                 disabled={!!loading}
                 style={{
-                  marginTop: 12, borderWidth: 1, borderColor: C.borderSoft, borderRadius: 14,
+                  marginTop: 12, borderWidth: 1, borderColor: C.warn, borderRadius: 14,
                   paddingVertical: 14, alignItems: "center",
                 }}
               >
-                <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase" }}>
+                <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 2, color: C.warn, textTransform: "uppercase" }}>
                   Test Gameplay — new table preview
                 </Text>
               </TouchableOpacity>

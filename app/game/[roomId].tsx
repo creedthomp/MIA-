@@ -521,6 +521,11 @@ export default function GameScreen() {
 
       {/* ── Header ── */}
       <SafeAreaView>
+        <View style={{ flexDirection: "row", height: 3 }}>
+          <View style={{ flex: 1, backgroundColor: C.accent }} />
+          <View style={{ flex: 1, backgroundColor: C.danger }} />
+          <View style={{ flex: 1, backgroundColor: C.warn }} />
+        </View>
         <View
           style={{
             flexDirection: "row", alignItems: "center",

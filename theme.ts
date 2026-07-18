@@ -30,11 +30,13 @@ export const COLORS = {
   fgMuted:    "#a8a3a0",
   fgFaint:    "#726d6a",
 
-  // Brand accents
-  accent:     "#1db6bb", // teal — links, active, current turn, truth/valid
+  // Brand accents — the three color-block players
+  accent:     "#1db6bb", // teal — PRIMARY buttons, links, active, current turn, truth
+  primary:    "#1db6bb", // teal — alias for primary buttons (reads clearer at call sites)
   onAccent:   "#ffffff", // text on a filled brand button
+  secondary:  "#de1a62", // magenta — SECONDARY buttons
   danger:     "#de1a62", // magenta — pull it, lie, life lost, errors
-  warn:       "#f59f0c", // amber — Mia, doubles, rewards
+  warn:       "#f59f0c", // amber — Mia, doubles, rewards, spark
   ok:         "#1db6bb", // teal — truth / valid call
   success:    "#2fb35c", // green — won, online, saved
 

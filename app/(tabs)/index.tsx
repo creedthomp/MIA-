@@ -190,10 +190,11 @@ function HeroDice({ size }: { size: number }) {
 }
 
 // ── Step card ─────────────────────────────────────────────────
-function StepCard({ n, title, desc, flex }: { n: string; title: string; desc: string; flex?: boolean }) {
+function StepCard({ n, title, desc, color, flex }: { n: string; title: string; desc: string; color: string; flex?: boolean }) {
   return (
-    <View style={{ ...(flex ? { flex: 1 } : {}), backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 28 }}>
-      <Text style={{ fontFamily: MONO, fontSize: 13, color: C.fgFaint }}>{n}</Text>
+    <View style={{ ...(flex ? { flex: 1 } : {}), backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 28, overflow: "hidden" }}>
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, backgroundColor: color }} />
+      <Text style={{ fontFamily: MONO, fontSize: 13, fontWeight: "700", color }}>{n}</Text>
       <Text style={{ fontWeight: "600", fontSize: 20, color: C.fg, marginTop: 14, marginBottom: 10 }}>{title}</Text>
       <Text style={{ fontSize: 15, lineHeight: 24, color: C.fgMuted }}>{desc}</Text>
     </View>
@@ -276,9 +277,9 @@ function TableMockup() {
 
 // ── Screen ────────────────────────────────────────────────────
 const STEPS = [
-  { n: "01", title: "Roll in secret",   desc: "Shake both dice under the cup. Only you see the result — everyone else sees the cup." },
-  { n: "02", title: "Claim higher",     desc: "Announce a roll higher than the last player. Tell the truth… or lie through your teeth." },
-  { n: "03", title: "Call the bluff",   desc: "Doubt them? Lift the cup. Wrong and you lose a life — right and they lose one." },
+  { n: "01", title: "Roll in secret",   desc: "Shake both dice under the cup. Only you see the result — everyone else sees the cup.", color: COLORS.accent },
+  { n: "02", title: "Claim higher",     desc: "Announce a roll higher than the last player. Tell the truth… or lie through your teeth.", color: COLORS.secondary },
+  { n: "03", title: "Call the bluff",   desc: "Doubt them? Lift the cup. Wrong and you lose a life — right and they lose one.", color: COLORS.warn },
 ];
 
 const FEATURES = [
@@ -302,6 +303,13 @@ export default function HomeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <SafeAreaView style={{ flex: 1 }}>
+
+        {/* ── Color-block strip ── */}
+        <View style={{ flexDirection: "row", height: 4 }}>
+          <View style={{ flex: 1, backgroundColor: C.accent }} />
+          <View style={{ flex: 1, backgroundColor: C.secondary }} />
+          <View style={{ flex: 1, backgroundColor: C.warn }} />
+        </View>
 
         {/* ── Nav ── */}
         <View style={{
@@ -361,7 +369,9 @@ export default function HomeScreen() {
                   letterSpacing: isWide ? -4 : -3,
                   color: C.fg, marginTop: 20,
                 }}>
-                  {"Roll.\nBluff.\nMiA!"}
+                  <Text style={{ color: C.accent }}>Roll.</Text>{"\n"}
+                  <Text style={{ color: C.secondary }}>Bluff.</Text>{"\n"}
+                  <Text style={{ color: C.warn }}>MiA!</Text>
                 </Text>
                 <Text style={{ fontSize: 18, lineHeight: 29, color: C.fgMuted, maxWidth: 440, marginTop: 24 }}>
                   Two dice, one lie. Announce a higher roll than the last player — or call their bluff. The whole table can smell fear. Can they smell yours?
@@ -377,9 +387,9 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => scrollRef.current?.scrollTo({ y: howToPlayY.current, animated: true })}
-                      style={{ backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingVertical: 14, paddingHorizontal: 26 }}
+                      style={{ backgroundColor: "transparent", borderWidth: 1.5, borderColor: C.secondary, borderRadius: 8, paddingVertical: 14, paddingHorizontal: 26 }}
                     >
-                      <Text style={{ fontSize: 15, fontWeight: "500", color: C.fg }}>How to play</Text>
+                      <Text style={{ fontSize: 15, fontWeight: "600", color: C.secondary }}>How to play</Text>
                     </TouchableOpacity>
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -431,7 +441,7 @@ export default function HomeScreen() {
                 alignItems: isWide ? "center" : "flex-start",
               }}>
                 <View style={{ flex: isWide ? 0.9 : undefined }}>
-                  <Text style={{ fontFamily: MONO, fontSize: 12, letterSpacing: 4, textTransform: "uppercase", color: C.accent }}>
+                  <Text style={{ fontFamily: MONO, fontSize: 12, letterSpacing: 4, textTransform: "uppercase", color: C.secondary }}>
                     Live tables
                   </Text>
                   <Text style={{ fontWeight: "700", fontSize: isWide ? 40 : 28, letterSpacing: -1, color: C.fg, marginTop: 16 }}>
