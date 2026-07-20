@@ -354,6 +354,7 @@ export default function GameTestScreen() {
           wasHonest={g.verdict.wasHonest}
           challengerName={g.players.find((p) => p.id === g.verdict!.challengerId)?.name ?? "Someone"}
           loserName={g.players.find((p) => p.id === g.verdict!.loserId)?.name ?? "Someone"}
+          loserIsYou={g.verdict.loserId === "me"}
           livesLost={g.verdict.livesLost}
           isEliminated={g.verdict.isEliminated}
           revealedRoll={g.verdict.revealedRoll}

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -15,11 +15,13 @@ import { COLORS, FONT } from "@/theme";
 
 const C = COLORS;
 const MONO = FONT.brand;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface VerdictSheetProps {
   wasHonest: boolean;
   challengerName: string;
   loserName: string;
+  loserIsYou?: boolean;
   livesLost: number;
   isEliminated: boolean;
   revealedRoll: Roll;
@@ -31,6 +33,7 @@ export function VerdictSheet({
   wasHonest,
   challengerName,
   loserName,
+  loserIsYou,
   livesLost,
   isEliminated,
   revealedRoll,
@@ -52,7 +55,9 @@ export function VerdictSheet({
 
   return (
     <View style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 200 }}>
-      <Animated.View
+      {/* Tap the backdrop to dismiss early (it also auto-closes) */}
+      <AnimatedPressable
+        onPress={onContinue}
         style={[scrimStyle, { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.72)" }]}
       />
       <Animated.View
@@ -103,20 +108,14 @@ export function VerdictSheet({
           }}
         >
           <Text style={{ fontFamily: MONO, color: wasHonest ? C.truth : C.lie, fontWeight: "700", fontSize: 13 }}>
-            {loserName} loses {livesLost} {livesLost === 1 ? "life" : "lives"}
+            {loserName} {loserIsYou ? "lose" : "loses"} {livesLost} {livesLost === 1 ? "life" : "lives"}
             {isEliminated ? " — out" : ""}
           </Text>
         </View>
 
-        <TouchableOpacity
-          onPress={onContinue}
-          style={{
-            backgroundColor: C.accent, borderRadius: 12,
-            paddingVertical: 14, alignItems: "center", alignSelf: "stretch",
-          }}
-        >
-          <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 15 }}>Continue</Text>
-        </TouchableOpacity>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 1, color: C.fgFaint }}>
+          tap outside to dismiss
+        </Text>
       </Animated.View>
     </View>
   );
