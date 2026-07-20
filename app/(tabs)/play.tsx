@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import { useStore } from "@/services/store";
 import { supabase } from "@/services/supabase";
 import { createRoom, joinByCode, findOrJoinQuickMatch } from "@/services/roomService";
+import { startCheckout, fetchEntitlements } from "@/services/purchases";
 
 import { COLORS, FONT } from "@/theme";
 
@@ -172,22 +173,24 @@ function LeaderboardTab() {
 // ── Shop tab ─────────────────────────────────────────────────────
 // Cosmetic catalog. Front-end only for now — "Buy" is stubbed until
 // payments are wired (see the Stripe / IAP notes in the PR discussion).
-const SHOP_CUPS: { id: string; name: string; tint: string; price: string | null; owned?: boolean }[] = [
-  { id: "graphite", name: "Graphite", tint: "#24262b",     price: null, owned: true },
-  { id: "teal",     name: "Teal",     tint: COLORS.accent,    price: "$1.99" },
-  { id: "magenta",  name: "Magenta",  tint: COLORS.secondary, price: "$1.99" },
-  { id: "amber",    name: "Amber",    tint: COLORS.warn,      price: "$1.99" },
-  { id: "crimson",  name: "Crimson",  tint: "#c0392b",     price: "$2.99" },
-  { id: "royal",    name: "Royal",    tint: "#5b5bd6",     price: "$2.99" },
+// `itemId` must match a key in supabase/functions/_shared/catalog.ts (the
+// server sets the real price). A null itemId is a free default (owned).
+const SHOP_CUPS: { itemId: string | null; name: string; tint: string; price: string | null }[] = [
+  { itemId: null,          name: "Graphite", tint: "#24262b",        price: null },
+  { itemId: "cup_teal",    name: "Teal",     tint: COLORS.accent,    price: "$1.99" },
+  { itemId: "cup_magenta", name: "Magenta",  tint: COLORS.secondary, price: "$1.99" },
+  { itemId: "cup_amber",   name: "Amber",    tint: COLORS.warn,      price: "$1.99" },
+  { itemId: "cup_crimson", name: "Crimson",  tint: "#c0392b",        price: "$2.99" },
+  { itemId: "cup_royal",   name: "Royal",    tint: "#5b5bd6",        price: "$2.99" },
 ];
 
-const SHOP_EMOTES: { emoji: string; label: string; price: string }[] = [
-  { emoji: "👑", label: "Royalty",   price: "$0.99" },
-  { emoji: "🔥", label: "On fire",   price: "$0.99" },
-  { emoji: "🤡", label: "Clown",     price: "$0.99" },
-  { emoji: "💀", label: "Dead",      price: "$0.99" },
-  { emoji: "🧢", label: "Cap",       price: "$1.49" },
-  { emoji: "🎯", label: "Called it", price: "$1.49" },
+const SHOP_EMOTES: { itemId: string; emoji: string; label: string; price: string }[] = [
+  { itemId: "emote_royalty", emoji: "👑", label: "Royalty",   price: "$0.99" },
+  { itemId: "emote_fire",    emoji: "🔥", label: "On fire",   price: "$0.99" },
+  { itemId: "emote_clown",   emoji: "🤡", label: "Clown",     price: "$0.99" },
+  { itemId: "emote_dead",    emoji: "💀", label: "Dead",      price: "$0.99" },
+  { itemId: "emote_cap",     emoji: "🧢", label: "Cap",       price: "$1.49" },
+  { itemId: "emote_target",  emoji: "🎯", label: "Called it", price: "$1.49" },
 ];
 
 function CupSwatch({ tint }: { tint: string }) {
@@ -200,13 +203,16 @@ function CupSwatch({ tint }: { tint: string }) {
   );
 }
 
-function BuyButton({ price, onPress }: { price: string; onPress: () => void }) {
+function BuyButton({ price, loading, onPress }: { price: string; loading?: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={{ marginTop: 12, alignSelf: "stretch", backgroundColor: C.accent, borderRadius: 8, paddingVertical: 8, alignItems: "center" }}
+      disabled={loading}
+      style={{ marginTop: 12, alignSelf: "stretch", backgroundColor: C.accent, borderRadius: 8, paddingVertical: 8, alignItems: "center", opacity: loading ? 0.7 : 1 }}
     >
-      <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 13 }}>{price}</Text>
+      {loading
+        ? <ActivityIndicator color={C.onAccent} size="small" />
+        : <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 13 }}>{price}</Text>}
     </TouchableOpacity>
   );
 }
@@ -221,8 +227,22 @@ function OwnedChip() {
 
 function ShopTab() {
   const [notice, setNotice] = useState<string | null>(null);
-  const buy = (label: string) =>
-    setNotice(`Checkout for “${label}” isn't live yet — Stripe payments are coming soon.`);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [owned, setOwned] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    fetchEntitlements().then(setOwned);
+  }, []);
+
+  async function buy(itemId: string) {
+    setNotice(null);
+    setBusy(itemId);
+    const { error } = await startCheckout(itemId);
+    setBusy(null);
+    // On web this redirects away; an error means checkout couldn't start
+    // (e.g. payments not configured yet).
+    if (error) setNotice(error);
+  }
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 56 }}>
@@ -241,27 +261,35 @@ function ShopTab() {
 
       <Section title="Cups">
         <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-          {SHOP_CUPS.map((cup) => (
-            <View key={cup.id} style={{ width: "48%", marginBottom: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 16, alignItems: "center" }}>
-              <CupSwatch tint={cup.tint} />
-              <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }}>{cup.name}</Text>
-              {cup.owned || !cup.price
-                ? <OwnedChip />
-                : <BuyButton price={cup.price} onPress={() => buy(`${cup.name} cup`)} />}
-            </View>
-          ))}
+          {SHOP_CUPS.map((cup) => {
+            const isOwned = cup.itemId === null || owned.has(cup.itemId);
+            return (
+              <View key={cup.name} style={{ width: "48%", marginBottom: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 16, alignItems: "center" }}>
+                <CupSwatch tint={cup.tint} />
+                <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }}>{cup.name}</Text>
+                {isOwned || !cup.price || !cup.itemId
+                  ? <OwnedChip />
+                  : <BuyButton price={cup.price} loading={busy === cup.itemId} onPress={() => buy(cup.itemId!)} />}
+              </View>
+            );
+          })}
         </View>
       </Section>
 
       <Section title="Emotes">
         <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-          {SHOP_EMOTES.map((em) => (
-            <View key={em.label} style={{ width: "48%", marginBottom: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 16, alignItems: "center" }}>
-              <Text style={{ fontSize: 34, marginBottom: 8 }}>{em.emoji}</Text>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }}>{em.label}</Text>
-              <BuyButton price={em.price} onPress={() => buy(`${em.label} emote`)} />
-            </View>
-          ))}
+          {SHOP_EMOTES.map((em) => {
+            const isOwned = owned.has(em.itemId);
+            return (
+              <View key={em.itemId} style={{ width: "48%", marginBottom: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 16, alignItems: "center" }}>
+                <Text style={{ fontSize: 34, marginBottom: 8 }}>{em.emoji}</Text>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }}>{em.label}</Text>
+                {isOwned
+                  ? <OwnedChip />
+                  : <BuyButton price={em.price} loading={busy === em.itemId} onPress={() => buy(em.itemId)} />}
+              </View>
+            );
+          })}
         </View>
       </Section>
 

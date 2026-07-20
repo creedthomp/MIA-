@@ -419,3 +419,8 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Stripe calls the webhook without a Supabase JWT, so it must skip JWT verification.
+# Security comes from Stripe signature verification inside the function instead.
+[functions.stripe-webhook]
+verify_jwt = false
