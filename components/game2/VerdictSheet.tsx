@@ -78,7 +78,7 @@ export function VerdictSheet({
         <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.fgFaint, textTransform: "uppercase", marginBottom: 8 }}>
           The verdict
         </Text>
-        <Text style={{ fontSize: 38, fontWeight: "800", letterSpacing: -1, color: wasHonest ? C.ok : C.danger, marginBottom: 10 }}>
+        <Text style={{ fontSize: 38, fontWeight: "800", letterSpacing: -1, color: wasHonest ? C.truth : C.lie, marginBottom: 10 }}>
           {wasHonest ? "TRUTH." : "LIE."}
         </Text>
         <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, marginBottom: 20, textAlign: "center", lineHeight: 18 }}>
@@ -93,16 +93,16 @@ export function VerdictSheet({
 
         <View
           style={{
-            backgroundColor: wasHonest ? "rgba(29,182,187,0.09)" : "rgba(222,26,98,0.09)",
+            backgroundColor: wasHonest ? "rgba(47,179,92,0.10)" : "rgba(239,68,68,0.10)",
             borderWidth: 1,
-            borderColor: wasHonest ? "rgba(29,182,187,0.32)" : "rgba(222,26,98,0.32)",
+            borderColor: wasHonest ? "rgba(47,179,92,0.34)" : "rgba(239,68,68,0.34)",
             borderRadius: 10,
             paddingHorizontal: 18,
             paddingVertical: 9,
             marginBottom: 24,
           }}
         >
-          <Text style={{ fontFamily: MONO, color: wasHonest ? C.ok : C.danger, fontWeight: "700", fontSize: 13 }}>
+          <Text style={{ fontFamily: MONO, color: wasHonest ? C.truth : C.lie, fontWeight: "700", fontSize: 13 }}>
             {loserName} loses {livesLost} {livesLost === 1 ? "life" : "lives"}
             {isEliminated ? " — out" : ""}
           </Text>

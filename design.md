@@ -13,11 +13,16 @@ change the brand here and it propagates everywhere. Never hardcode a hex.
 | **Teal** | `accent` / `primary` / `ok` | `#1DB6BB` | **Primary buttons** (filled), links, active/current-turn ring, focus, "TRUTH", valid calls |
 | **Magenta** | `secondary` / `danger` | `#DE1A62` | **Secondary buttons** (outline), Pull It, "LIE", life lost, error states |
 | **Amber** | `warn` | `#F59F0C` | Mia, doubles, room codes, the "spark" accent, rewards |
-| **Green** | `success` | `#2FB35C` | Won, online dot, saved |
+| **Green** | `success` / `truth` | `#2FB35C` | Won, online dot, saved, honest verdict |
+| **Red** | `lie` | `#EF4444` | Caught-lying verdict only |
 | **Ink** | (base) | `#232222` | Warm near-black the surface ramp is built from |
 
 **Buttons:** primary = filled teal (`accent`/`primary`), text `onAccent #ffffff`.
 Secondary = magenta outline (`secondary`), transparent fill.
+
+**Verdict exception:** the challenge reveal uses universal green (`truth`) / red
+(`lie`) instead of the brand teal/magenta — the one spot where "correct vs wrong"
+convention beats palette purity. Life-loss/pull-it elsewhere stay magenta `danger`.
 
 **Tri-color usage:** every screen carries all three brand colors, not just teal.
 The three-word wordmark ("Roll. Bluff. MiA!" / "Roll. Bluff. Win.") is set teal ·
