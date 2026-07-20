@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -15,11 +15,13 @@ import { COLORS, FONT } from "@/theme";
 
 const C = COLORS;
 const MONO = FONT.brand;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface VerdictSheetProps {
   wasHonest: boolean;
   challengerName: string;
   loserName: string;
+  loserIsYou?: boolean;
   livesLost: number;
   isEliminated: boolean;
   revealedRoll: Roll;
@@ -31,6 +33,7 @@ export function VerdictSheet({
   wasHonest,
   challengerName,
   loserName,
+  loserIsYou,
   livesLost,
   isEliminated,
   revealedRoll,
@@ -52,7 +55,9 @@ export function VerdictSheet({
 
   return (
     <View style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 200 }}>
-      <Animated.View
+      {/* Tap the backdrop to dismiss early (it also auto-closes) */}
+      <AnimatedPressable
+        onPress={onContinue}
         style={[scrimStyle, { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.72)" }]}
       />
       <Animated.View
@@ -78,7 +83,7 @@ export function VerdictSheet({
         <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.fgFaint, textTransform: "uppercase", marginBottom: 8 }}>
           The verdict
         </Text>
-        <Text style={{ fontSize: 38, fontWeight: "800", letterSpacing: -1, color: wasHonest ? C.ok : C.danger, marginBottom: 10 }}>
+        <Text style={{ fontSize: 38, fontWeight: "800", letterSpacing: -1, color: wasHonest ? C.truth : C.lie, marginBottom: 10 }}>
           {wasHonest ? "TRUTH." : "LIE."}
         </Text>
         <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, marginBottom: 20, textAlign: "center", lineHeight: 18 }}>
@@ -93,30 +98,24 @@ export function VerdictSheet({
 
         <View
           style={{
-            backgroundColor: wasHonest ? "rgba(29,182,187,0.09)" : "rgba(222,26,98,0.09)",
+            backgroundColor: wasHonest ? "rgba(47,179,92,0.10)" : "rgba(239,68,68,0.10)",
             borderWidth: 1,
-            borderColor: wasHonest ? "rgba(29,182,187,0.32)" : "rgba(222,26,98,0.32)",
+            borderColor: wasHonest ? "rgba(47,179,92,0.34)" : "rgba(239,68,68,0.34)",
             borderRadius: 10,
             paddingHorizontal: 18,
             paddingVertical: 9,
             marginBottom: 24,
           }}
         >
-          <Text style={{ fontFamily: MONO, color: wasHonest ? C.ok : C.danger, fontWeight: "700", fontSize: 13 }}>
-            {loserName} loses {livesLost} {livesLost === 1 ? "life" : "lives"}
+          <Text style={{ fontFamily: MONO, color: wasHonest ? C.truth : C.lie, fontWeight: "700", fontSize: 13 }}>
+            {loserName} {loserIsYou ? "lose" : "loses"} {livesLost} {livesLost === 1 ? "life" : "lives"}
             {isEliminated ? " — out" : ""}
           </Text>
         </View>
 
-        <TouchableOpacity
-          onPress={onContinue}
-          style={{
-            backgroundColor: C.accent, borderRadius: 12,
-            paddingVertical: 14, alignItems: "center", alignSelf: "stretch",
-          }}
-        >
-          <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 15 }}>Continue</Text>
-        </TouchableOpacity>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 1, color: C.fgFaint }}>
+          tap outside to dismiss
+        </Text>
       </Animated.View>
     </View>
   );

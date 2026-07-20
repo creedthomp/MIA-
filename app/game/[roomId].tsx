@@ -462,9 +462,14 @@ export default function GameScreen() {
     );
   }
 
-  const loserName = gamePlayers.find((p) => p.userId === revealData?.loserUserId)?.displayName ?? "Someone";
-  const revealChallengerName =
-    gamePlayers.find((p) => p.userId === revealData?.challengerUserId)?.displayName ?? "Someone";
+  const loserIsYou = revealData?.loserUserId === user?.id;
+  const loserName = loserIsYou
+    ? "You"
+    : gamePlayers.find((p) => p.userId === revealData?.loserUserId)?.displayName ?? "Someone";
+  const challengerIsYou = revealData?.challengerUserId === user?.id;
+  const revealChallengerName = challengerIsYou
+    ? "You"
+    : gamePlayers.find((p) => p.userId === revealData?.challengerUserId)?.displayName ?? "Someone";
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -474,6 +479,7 @@ export default function GameScreen() {
           wasHonest={revealData.wasHonest}
           challengerName={revealChallengerName}
           loserName={loserName}
+          loserIsYou={loserIsYou}
           livesLost={revealData.livesLost}
           isEliminated={revealData.isEliminated}
           revealedRoll={revealData.revealedRoll as Roll}
@@ -521,6 +527,11 @@ export default function GameScreen() {
 
       {/* ── Header ── */}
       <SafeAreaView>
+        <View style={{ flexDirection: "row", height: 3 }}>
+          <View style={{ flex: 1, backgroundColor: C.accent }} />
+          <View style={{ flex: 1, backgroundColor: C.danger }} />
+          <View style={{ flex: 1, backgroundColor: C.warn }} />
+        </View>
         <View
           style={{
             flexDirection: "row", alignItems: "center",

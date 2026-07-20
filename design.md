@@ -10,13 +10,23 @@ change the brand here and it propagates everywhere. Never hardcode a hex.
 
 | Role | Token | Hex | Use |
 |------|-------|-----|-----|
-| **Teal** | `accent` / `ok` | `#1DB6BB` | Links, active/current-turn ring, focus, filled primary buttons, "TRUTH", valid calls |
-| **Magenta** | `danger` | `#DE1A62` | Pull It, "LIE", life lost, error states |
-| **Amber** | `warn` | `#F59F0C` | Mia, doubles, highlights, rewards |
-| **Green** | `success` | `#2FB35C` | Won, online dot, saved |
+| **Teal** | `accent` / `primary` / `ok` | `#1DB6BB` | **Primary buttons** (filled), links, active/current-turn ring, focus, "TRUTH", valid calls |
+| **Magenta** | `secondary` / `danger` | `#DE1A62` | **Secondary buttons** (outline), Pull It, "LIE", life lost, error states |
+| **Amber** | `warn` | `#F59F0C` | Mia, doubles, room codes, the "spark" accent, rewards |
+| **Green** | `success` / `truth` | `#2FB35C` | Won, online dot, saved, honest verdict |
+| **Red** | `lie` | `#EF4444` | Caught-lying verdict only |
 | **Ink** | (base) | `#232222` | Warm near-black the surface ramp is built from |
 
-Text on filled brand buttons uses `onAccent #ffffff`.
+**Buttons:** primary = filled teal (`accent`/`primary`), text `onAccent #ffffff`.
+Secondary = magenta outline (`secondary`), transparent fill.
+
+**Verdict exception:** the challenge reveal uses universal green (`truth`) / red
+(`lie`) instead of the brand teal/magenta — the one spot where "correct vs wrong"
+convention beats palette purity. Life-loss/pull-it elsewhere stay magenta `danger`.
+
+**Tri-color usage:** every screen carries all three brand colors, not just teal.
+The three-word wordmark ("Roll. Bluff. MiA!" / "Roll. Bluff. Win.") is set teal ·
+magenta · amber, and step/number accents cycle the same order.
 
 ### Surfaces (warm near-blacks)
 `bg #1b1a1a` → `surface #211f1f` → `surface2 #282525` → `elevated #302c2c` → `card #211f1f`

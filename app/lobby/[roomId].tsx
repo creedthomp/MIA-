@@ -125,6 +125,13 @@ export default function LobbyScreen() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <SafeAreaView style={{ flex: 1 }}>
 
+        {/* ── Color-block strip ── */}
+        <View style={{ flexDirection: "row", height: 4 }}>
+          <View style={{ flex: 1, backgroundColor: C.accent }} />
+          <View style={{ flex: 1, backgroundColor: C.secondary }} />
+          <View style={{ flex: 1, backgroundColor: C.warn }} />
+        </View>
+
         {/* ── Header ── */}
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 }}>
           <TouchableOpacity onPress={() => router.back()} style={{ padding: 6, marginRight: 10 }}>
@@ -155,7 +162,7 @@ export default function LobbyScreen() {
             <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: C.fgFaint, textTransform: "uppercase", marginBottom: 12 }}>
               Table Code
             </Text>
-            <Text style={{ fontFamily: MONO, fontSize: 38, fontWeight: "700", color: C.fg, letterSpacing: 10 }}>
+            <Text style={{ fontFamily: MONO, fontSize: 38, fontWeight: "700", color: C.warn, letterSpacing: 10 }}>
               {room.code}
             </Text>
             <Text style={{ fontFamily: MONO, fontSize: 11, color: C.fgFaint, marginTop: 12 }}>

@@ -23,10 +23,11 @@ import { COLORS, FONT } from "@/theme";
 const C = COLORS;
 const MONO = FONT.brand;
 
-type Tab = "play" | "rules" | "leaderboard" | "settings";
+type Tab = "play" | "shop" | "rules" | "leaderboard" | "settings";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "play",        label: "Play" },
+  { id: "shop",        label: "Shop" },
   { id: "rules",       label: "Rules" },
   { id: "leaderboard", label: "Leaderboard" },
   { id: "settings",    label: "Settings" },
@@ -165,6 +166,109 @@ function LeaderboardTab() {
         Track wins, streaks, and the most brazen bluffers at the table. Coming in a future update.
       </Text>
     </View>
+  );
+}
+
+// ── Shop tab ─────────────────────────────────────────────────────
+// Cosmetic catalog. Front-end only for now — "Buy" is stubbed until
+// payments are wired (see the Stripe / IAP notes in the PR discussion).
+const SHOP_CUPS: { id: string; name: string; tint: string; price: string | null; owned?: boolean }[] = [
+  { id: "graphite", name: "Graphite", tint: "#24262b",     price: null, owned: true },
+  { id: "teal",     name: "Teal",     tint: COLORS.accent,    price: "$1.99" },
+  { id: "magenta",  name: "Magenta",  tint: COLORS.secondary, price: "$1.99" },
+  { id: "amber",    name: "Amber",    tint: COLORS.warn,      price: "$1.99" },
+  { id: "crimson",  name: "Crimson",  tint: "#c0392b",     price: "$2.99" },
+  { id: "royal",    name: "Royal",    tint: "#5b5bd6",     price: "$2.99" },
+];
+
+const SHOP_EMOTES: { emoji: string; label: string; price: string }[] = [
+  { emoji: "👑", label: "Royalty",   price: "$0.99" },
+  { emoji: "🔥", label: "On fire",   price: "$0.99" },
+  { emoji: "🤡", label: "Clown",     price: "$0.99" },
+  { emoji: "💀", label: "Dead",      price: "$0.99" },
+  { emoji: "🧢", label: "Cap",       price: "$1.49" },
+  { emoji: "🎯", label: "Called it", price: "$1.49" },
+];
+
+function CupSwatch({ tint }: { tint: string }) {
+  return (
+    <View style={{ alignItems: "center", marginBottom: 12 }}>
+      <View style={{ width: 42, height: 8, borderRadius: 3, backgroundColor: tint, opacity: 0.9 }} />
+      <View style={{ width: 38, height: 26, backgroundColor: tint }} />
+      <View style={{ width: 30, height: 8, borderRadius: 3, backgroundColor: tint, opacity: 0.7 }} />
+    </View>
+  );
+}
+
+function BuyButton({ price, onPress }: { price: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{ marginTop: 12, alignSelf: "stretch", backgroundColor: C.accent, borderRadius: 8, paddingVertical: 8, alignItems: "center" }}
+    >
+      <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 13 }}>{price}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function OwnedChip() {
+  return (
+    <View style={{ marginTop: 12, alignSelf: "stretch", borderWidth: 1, borderColor: C.success, borderRadius: 8, paddingVertical: 7, alignItems: "center" }}>
+      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1, color: C.success }}>OWNED</Text>
+    </View>
+  );
+}
+
+function ShopTab() {
+  const [notice, setNotice] = useState<string | null>(null);
+  const buy = (label: string) =>
+    setNotice(`Checkout for “${label}” isn't live yet — Stripe payments are coming soon.`);
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 56 }}>
+      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 4, color: C.warn, textTransform: "uppercase", marginBottom: 8 }}>
+        Cosmetics
+      </Text>
+      <Text style={{ fontSize: 26, fontWeight: "700", color: C.fg, letterSpacing: -0.5, marginBottom: 20 }}>
+        Shop
+      </Text>
+
+      {notice && (
+        <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.warn, borderRadius: 10, padding: 14, marginBottom: 24 }}>
+          <Text style={{ fontFamily: MONO, fontSize: 12, color: C.warn, lineHeight: 18 }}>{notice}</Text>
+        </View>
+      )}
+
+      <Section title="Cups">
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+          {SHOP_CUPS.map((cup) => (
+            <View key={cup.id} style={{ width: "48%", marginBottom: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 16, alignItems: "center" }}>
+              <CupSwatch tint={cup.tint} />
+              <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }}>{cup.name}</Text>
+              {cup.owned || !cup.price
+                ? <OwnedChip />
+                : <BuyButton price={cup.price} onPress={() => buy(`${cup.name} cup`)} />}
+            </View>
+          ))}
+        </View>
+      </Section>
+
+      <Section title="Emotes">
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+          {SHOP_EMOTES.map((em) => (
+            <View key={em.label} style={{ width: "48%", marginBottom: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 16, alignItems: "center" }}>
+              <Text style={{ fontSize: 34, marginBottom: 8 }}>{em.emoji}</Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }}>{em.label}</Text>
+              <BuyButton price={em.price} onPress={() => buy(`${em.label} emote`)} />
+            </View>
+          ))}
+        </View>
+      </Section>
+
+      <Text style={{ fontFamily: MONO, fontSize: 11, color: C.fgFaint, lineHeight: 18, textAlign: "center", marginTop: 8 }}>
+        Cosmetic only — cups and emotes never affect gameplay.
+      </Text>
+    </ScrollView>
   );
 }
 
@@ -348,6 +452,13 @@ export default function PlayScreen() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <SafeAreaView style={{ flex: 1 }}>
 
+        {/* ── Color-block strip ── */}
+        <View style={{ flexDirection: "row", height: 4 }}>
+          <View style={{ flex: 1, backgroundColor: C.accent }} />
+          <View style={{ flex: 1, backgroundColor: C.secondary }} />
+          <View style={{ flex: 1, backgroundColor: C.warn }} />
+        </View>
+
         {/* ── Header ── */}
         <View style={{
           flexDirection: "row", alignItems: "center",
@@ -404,13 +515,13 @@ export default function PlayScreen() {
                   onPress={handleQuickMatch}
                   disabled={!!loading}
                   style={{
-                    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+                    flex: 1, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.secondary,
                     borderRadius: 14, padding: isWide ? 22 : 18, opacity: loading ? 0.65 : 1,
                   }}
                 >
-                  {loading === "quick" ? <ActivityIndicator color={C.fg} /> : (
+                  {loading === "quick" ? <ActivityIndicator color={C.secondary} /> : (
                     <>
-                      <Text style={{ fontSize: 17, fontWeight: "600", color: C.fg, marginBottom: 6 }}>Quick Match</Text>
+                      <Text style={{ fontSize: 17, fontWeight: "600", color: C.secondary, marginBottom: 6 }}>Quick Match</Text>
                       <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Jump into a random open table</Text>
                     </>
                   )}
@@ -420,11 +531,11 @@ export default function PlayScreen() {
                   onPress={() => { setHomeError(null); setJoinModalVisible(true); }}
                   disabled={!!loading}
                   style={{
-                    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+                    flex: 1, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.secondary,
                     borderRadius: 14, padding: isWide ? 22 : 18, opacity: loading ? 0.65 : 1,
                   }}
                 >
-                  <Text style={{ fontSize: 17, fontWeight: "600", color: C.fg, marginBottom: 6 }}>Join with Code</Text>
+                  <Text style={{ fontSize: 17, fontWeight: "600", color: C.secondary, marginBottom: 6 }}>Join with Code</Text>
                   <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Enter the 6-character room code</Text>
                 </TouchableOpacity>
               </View>
@@ -434,11 +545,11 @@ export default function PlayScreen() {
                 onPress={() => router.push("/game-test" as never)}
                 disabled={!!loading}
                 style={{
-                  marginTop: 12, borderWidth: 1, borderColor: C.borderSoft, borderRadius: 14,
+                  marginTop: 12, borderWidth: 1, borderColor: C.warn, borderRadius: 14,
                   paddingVertical: 14, alignItems: "center",
                 }}
               >
-                <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase" }}>
+                <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 2, color: C.warn, textTransform: "uppercase" }}>
                   Test Gameplay — new table preview
                 </Text>
               </TouchableOpacity>
@@ -447,6 +558,7 @@ export default function PlayScreen() {
           </View>
         )}
 
+        {activeTab === "shop"        && <ShopTab />}
         {activeTab === "rules"       && <RulesTab />}
         {activeTab === "leaderboard" && <LeaderboardTab />}
         {activeTab === "settings"    && <SettingsTab />}
