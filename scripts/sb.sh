@@ -32,8 +32,14 @@ case $CMD in
     echo "→ pushing migrations to remote (cloud) supabase..."
     supabase db push
     ;;
-  *)
-    echo "usage: bun run sb:{start|stop|status|types|push}"
+  "")
+    echo "usage: bun run sb <supabase args>   (PATH + Docker preset)"
+    echo "   or: bun run sb:{start|stop|status|types|push}"
     exit 1
+    ;;
+  *)
+    # Passthrough: run any supabase command with PATH/DOCKER_HOST/.env.local set.
+    # e.g. bun run sb functions serve --env-file supabase/functions/.env
+    supabase "$@"
     ;;
 esac

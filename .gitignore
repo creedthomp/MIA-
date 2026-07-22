@@ -43,3 +43,6 @@ yarn-error.*
 # Supabase local state
 supabase/.branches
 supabase/.temp
+
+# Local edge-function secrets
+supabase/functions/.env

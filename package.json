@@ -39,6 +39,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "dev": "bash scripts/dev.sh",
+    "sb": "bash scripts/sb.sh",
     "sb:start": "bash scripts/sb.sh start",
     "sb:stop": "bash scripts/sb.sh stop",
     "sb:status": "bash scripts/sb.sh status",
