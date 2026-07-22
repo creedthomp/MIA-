@@ -10,17 +10,17 @@ export interface CatalogItem {
 
 export const CATALOG: Record<string, CatalogItem> = {
   // Cups
-  cup_teal:    { name: "Teal Cup",    priceCents: 199, kind: "cup" },
-  cup_magenta: { name: "Magenta Cup", priceCents: 199, kind: "cup" },
-  cup_amber:   { name: "Amber Cup",   priceCents: 199, kind: "cup" },
-  cup_crimson: { name: "Crimson Cup", priceCents: 299, kind: "cup" },
-  cup_royal:   { name: "Royal Cup",   priceCents: 299, kind: "cup" },
+  cup_teal:    { name: "Teal Cup",    priceCents: 100, kind: "cup" },
+  cup_magenta: { name: "Magenta Cup", priceCents: 100, kind: "cup" },
+  cup_amber:   { name: "Amber Cup",   priceCents: 100, kind: "cup" },
+  cup_crimson: { name: "Crimson Cup", priceCents: 100, kind: "cup" },
+  cup_royal:   { name: "Royal Cup",   priceCents: 100, kind: "cup" },
 
   // Emotes
-  emote_royalty: { name: "Royalty Emote",   priceCents: 99,  kind: "emote" },
-  emote_fire:    { name: "On Fire Emote",   priceCents: 99,  kind: "emote" },
-  emote_clown:   { name: "Clown Emote",     priceCents: 99,  kind: "emote" },
-  emote_dead:    { name: "Dead Emote",      priceCents: 99,  kind: "emote" },
-  emote_cap:     { name: "Cap Emote",       priceCents: 149, kind: "emote" },
-  emote_target:  { name: "Called It Emote", priceCents: 149, kind: "emote" },
+  emote_royalty: { name: "Royalty Emote",   priceCents: 100, kind: "emote" },
+  emote_fire:    { name: "On Fire Emote",   priceCents: 100, kind: "emote" },
+  emote_clown:   { name: "Clown Emote",     priceCents: 100, kind: "emote" },
+  emote_dead:    { name: "Dead Emote",      priceCents: 100, kind: "emote" },
+  emote_cap:     { name: "Cap Emote",       priceCents: 100, kind: "emote" },
+  emote_target:  { name: "Called It Emote", priceCents: 100, kind: "emote" },
 };

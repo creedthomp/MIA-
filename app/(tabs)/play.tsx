@@ -177,20 +177,20 @@ function LeaderboardTab() {
 // server sets the real price). A null itemId is a free default (owned).
 const SHOP_CUPS: { itemId: string | null; name: string; tint: string; price: string | null }[] = [
   { itemId: null,          name: "Graphite", tint: "#24262b",        price: null },
-  { itemId: "cup_teal",    name: "Teal",     tint: COLORS.accent,    price: "$1.99" },
-  { itemId: "cup_magenta", name: "Magenta",  tint: COLORS.secondary, price: "$1.99" },
-  { itemId: "cup_amber",   name: "Amber",    tint: COLORS.warn,      price: "$1.99" },
-  { itemId: "cup_crimson", name: "Crimson",  tint: "#c0392b",        price: "$2.99" },
-  { itemId: "cup_royal",   name: "Royal",    tint: "#5b5bd6",        price: "$2.99" },
+  { itemId: "cup_teal",    name: "Teal",     tint: COLORS.accent,    price: "$1.00" },
+  { itemId: "cup_magenta", name: "Magenta",  tint: COLORS.secondary, price: "$1.00" },
+  { itemId: "cup_amber",   name: "Amber",    tint: COLORS.warn,      price: "$1.00" },
+  { itemId: "cup_crimson", name: "Crimson",  tint: "#c0392b",        price: "$1.00" },
+  { itemId: "cup_royal",   name: "Royal",    tint: "#5b5bd6",        price: "$1.00" },
 ];
 
 const SHOP_EMOTES: { itemId: string; emoji: string; label: string; price: string }[] = [
-  { itemId: "emote_royalty", emoji: "👑", label: "Royalty",   price: "$0.99" },
-  { itemId: "emote_fire",    emoji: "🔥", label: "On fire",   price: "$0.99" },
-  { itemId: "emote_clown",   emoji: "🤡", label: "Clown",     price: "$0.99" },
-  { itemId: "emote_dead",    emoji: "💀", label: "Dead",      price: "$0.99" },
-  { itemId: "emote_cap",     emoji: "🧢", label: "Cap",       price: "$1.49" },
-  { itemId: "emote_target",  emoji: "🎯", label: "Called it", price: "$1.49" },
+  { itemId: "emote_royalty", emoji: "👑", label: "Royalty",   price: "$1.00" },
+  { itemId: "emote_fire",    emoji: "🔥", label: "On fire",   price: "$1.00" },
+  { itemId: "emote_clown",   emoji: "🤡", label: "Clown",     price: "$1.00" },
+  { itemId: "emote_dead",    emoji: "💀", label: "Dead",      price: "$1.00" },
+  { itemId: "emote_cap",     emoji: "🧢", label: "Cap",       price: "$1.00" },
+  { itemId: "emote_target",  emoji: "🎯", label: "Called it", price: "$1.00" },
 ];
 
 function CupSwatch({ tint }: { tint: string }) {
@@ -567,20 +567,6 @@ export default function PlayScreen() {
                   <Text style={{ fontSize: 13, color: C.fgMuted, lineHeight: 19 }}>Enter the 6-character room code</Text>
                 </TouchableOpacity>
               </View>
-
-              {/* Table v2 design sandbox — solo, no room needed */}
-              <TouchableOpacity
-                onPress={() => router.push("/game-test" as never)}
-                disabled={!!loading}
-                style={{
-                  marginTop: 12, borderWidth: 1, borderColor: C.warn, borderRadius: 14,
-                  paddingVertical: 14, alignItems: "center",
-                }}
-              >
-                <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 2, color: C.warn, textTransform: "uppercase" }}>
-                  Test Gameplay — new table preview
-                </Text>
-              </TouchableOpacity>
 
             </View>
           </View>
