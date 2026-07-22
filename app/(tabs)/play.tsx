@@ -18,6 +18,8 @@ import { useStore } from "@/services/store";
 import { supabase } from "@/services/supabase";
 import { createRoom, joinByCode, findOrJoinQuickMatch } from "@/services/roomService";
 import { startCheckout, fetchEntitlements } from "@/services/purchases";
+import { fetchGlobalLeaderboard, fetchMyStats, type LeaderRow, type MyStats } from "@/services/leaderboard";
+import { getTier } from "@/utils/ranking";
 
 import { COLORS, FONT } from "@/theme";
 
@@ -154,19 +156,121 @@ function RulesTab() {
 }
 
 // ── Leaderboard tab ──────────────────────────────────────────────
-function LeaderboardTab() {
+function TierBadge({ trophies, size = 11 }: { trophies: number; size?: number }) {
+  const tier = getTier(trophies);
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 4, color: C.fgFaint, textTransform: "uppercase", marginBottom: 14 }}>
-        Coming soon
-      </Text>
-      <Text style={{ fontSize: 24, fontWeight: "700", color: C.fg, letterSpacing: -0.5, textAlign: "center", marginBottom: 12 }}>
-        Leaderboard
-      </Text>
-      <Text style={{ fontSize: 14, color: C.fgMuted, textAlign: "center", lineHeight: 22, maxWidth: 280 }}>
-        Track wins, streaks, and the most brazen bluffers at the table. Coming in a future update.
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+      <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: tier.color }} />
+      <Text style={{ fontFamily: MONO, fontSize: size, letterSpacing: 1, color: tier.color, textTransform: "uppercase" }}>
+        {tier.name}
       </Text>
     </View>
+  );
+}
+
+function LeaderboardTab() {
+  const { user } = useStore();
+  const [rows, setRows] = useState<LeaderRow[]>([]);
+  const [mine, setMine] = useState<MyStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [board, my] = await Promise.all([
+        fetchGlobalLeaderboard(100),
+        user ? fetchMyStats(user.id) : Promise.resolve(null),
+      ]);
+      if (!alive) return;
+      setRows(board);
+      setMine(my);
+      setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [user?.id]);
+
+  const myRank = user ? rows.findIndex((r) => r.userId === user.id) + 1 : 0; // 0 = unranked/not in top list
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={C.accent} />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 56 }}>
+      <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 4, color: C.accent, textTransform: "uppercase", marginBottom: 8 }}>
+        Global ladder
+      </Text>
+      <Text style={{ fontSize: 26, fontWeight: "700", color: C.fg, letterSpacing: -0.5, marginBottom: 20 }}>
+        Leaderboard
+      </Text>
+
+      {/* Your standing */}
+      <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 18, marginBottom: 24 }}>
+        {mine && mine.gamesRanked > 0 ? (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flex: 1 }}>
+              <TierBadge trophies={mine.trophies} size={12} />
+              <Text style={{ fontSize: 30, fontWeight: "800", color: C.fg, letterSpacing: -1, marginTop: 6 }}>
+                {mine.trophies} <Text style={{ fontSize: 15, fontWeight: "600", color: C.fgFaint }}>trophies</Text>
+              </Text>
+              <Text style={{ fontFamily: MONO, fontSize: 11, color: C.fgMuted, marginTop: 4 }}>
+                {mine.wins}W · {mine.gamesRanked} played{mine.streak >= 2 ? ` · ${mine.streak}🔥` : ""}
+              </Text>
+            </View>
+            {myRank > 0 && (
+              <View style={{ alignItems: "center" }}>
+                <Text style={{ fontFamily: MONO, fontSize: 10, color: C.fgFaint, letterSpacing: 1 }}>RANK</Text>
+                <Text style={{ fontSize: 26, fontWeight: "800", color: C.accent }}>#{myRank}</Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, lineHeight: 18 }}>
+            Play a <Text style={{ color: C.accent }}>Quick Match</Text> to join the ladder. Only quick matches are ranked.
+          </Text>
+        )}
+      </View>
+
+      {/* Top players */}
+      {rows.length === 0 ? (
+        <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgFaint, textAlign: "center", marginTop: 12 }}>
+          No ranked games yet — be the first.
+        </Text>
+      ) : (
+        rows.map((r, i) => {
+          const isMe = user?.id === r.userId;
+          return (
+            <View
+              key={r.userId}
+              style={{
+                flexDirection: "row", alignItems: "center",
+                paddingVertical: 11, paddingHorizontal: 14,
+                borderRadius: 10, marginBottom: 6,
+                backgroundColor: isMe ? C.surface2 : "transparent",
+                borderWidth: isMe ? 1 : 0, borderColor: C.accent,
+              }}
+            >
+              <Text style={{ fontFamily: MONO, fontSize: 13, fontWeight: "700", color: i < 3 ? C.warn : C.fgFaint, width: 34 }}>
+                {i === 0 ? "👑" : `#${i + 1}`}
+              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }} numberOfLines={1}>
+                  {isMe ? "You" : r.displayName}
+                </Text>
+                <TierBadge trophies={r.trophies} />
+              </View>
+              <Text style={{ fontFamily: MONO, fontSize: 15, fontWeight: "700", color: C.fg }}>
+                {r.trophies}
+              </Text>
+            </View>
+          );
+        })
+      )}
+    </ScrollView>
   );
 }
 

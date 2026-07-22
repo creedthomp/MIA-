@@ -82,6 +82,8 @@ export default function GameScreen() {
   const [activeEmotes, setActiveEmotes] = useState<Record<string, { emote: EmoteId; key: number }>>({});
 
   const startingRef = useRef(false);
+  const isRankedRef = useRef(false);
+  const finalizedRef = useRef(false);
   const verdictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const verdictAutoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const verdictHandledRef = useRef(false);
@@ -139,12 +141,13 @@ export default function GameScreen() {
     async function setup() {
       const { data: room } = await supabase
         .from("rooms")
-        .select("host_id")
+        .select("host_id, type")
         .eq("id", roomId)
         .single();
 
       if (!room) { router.back(); return; }
       const isHost = room.host_id === userId;
+      isRankedRef.current = room.type === "quickmatch";
 
       const { data: rp } = await supabase
         .from("room_players")
@@ -246,6 +249,16 @@ export default function GameScreen() {
         if (userId) {
           setFlashUserId(userId);
           setTimeout(() => setFlashUserId(null), 800);
+        }
+        break;
+      }
+
+      case "GAME_OVER": {
+        // Score the ranked match. Every client fires this; the edge function
+        // atomically claims the room so it runs exactly once.
+        if (isRankedRef.current && !finalizedRef.current) {
+          finalizedRef.current = true;
+          supabase.functions.invoke("finalize-ranked-match", { body: { roomId } });
         }
         break;
       }
