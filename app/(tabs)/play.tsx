@@ -193,12 +193,37 @@ const SHOP_EMOTES: { itemId: string; emoji: string; label: string; price: string
   { itemId: "emote_target",  emoji: "🎯", label: "Called it", price: "$1.00" },
 ];
 
+// Multiply a hex color's channels by `f` (clamped) for cheap shading.
+function shade(hex: string, f: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v * f)));
+  const r = c((n >> 16) & 255), g = c((n >> 8) & 255), b = c(n & 255);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
+// A little upright cup: wide mouth (with a visible opening) tapering to a
+// narrower base, shaded band-by-band for depth — matches the in-game cup.
 function CupSwatch({ tint }: { tint: string }) {
+  const bands: { w: number; h: number; c: string; rBottom?: number }[] = [
+    { w: 44, h: 9, c: tint },
+    { w: 41, h: 9, c: shade(tint, 0.86) },
+    { w: 38, h: 9, c: tint },
+    { w: 34, h: 7, c: shade(tint, 1.12), rBottom: 5 },
+  ];
   return (
     <View style={{ alignItems: "center", marginBottom: 12 }}>
-      <View style={{ width: 42, height: 8, borderRadius: 3, backgroundColor: tint, opacity: 0.9 }} />
-      <View style={{ width: 38, height: 26, backgroundColor: tint }} />
-      <View style={{ width: 30, height: 8, borderRadius: 3, backgroundColor: tint, opacity: 0.7 }} />
+      {/* Mouth rim + dark opening */}
+      <View style={{ width: 47, height: 12, borderRadius: 6, backgroundColor: shade(tint, 1.16), alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 35, height: 5, borderRadius: 3, backgroundColor: shade(tint, 0.5) }} />
+      </View>
+      {bands.map((b, i) => (
+        <View
+          key={i}
+          style={{ width: b.w, height: b.h, backgroundColor: b.c, borderBottomLeftRadius: b.rBottom ?? 0, borderBottomRightRadius: b.rBottom ?? 0 }}
+        />
+      ))}
+      {/* Ground shadow */}
+      <View style={{ width: 30, height: 4, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.35)", marginTop: 3 }} />
     </View>
   );
 }
