@@ -61,15 +61,25 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Participants + winner (the one never eliminated)
+    // Participants + winner. is_active is service-role-authoritative (clients
+    // can't write it), so a genuinely finished game has exactly one active
+    // player — the winner. Anything else means the room wasn't really won
+    // (e.g. a host flipped status early), so don't award trophies.
     const { data: players } = await admin
       .from("room_players")
       .select("user_id, is_active")
       .eq("room_id", roomId);
     if (!players || players.length < 2) throw new Error("Not enough players");
 
+    const active = players.filter((p) => p.is_active);
+    if (active.length !== 1) {
+      return new Response(JSON.stringify({ skipped: true, reason: "no single winner" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const n = players.length;
-    const winnerId = players.find((p) => p.is_active)?.user_id ?? null;
+    const winnerId = active[0].user_id;
 
     // Elimination order (first eliminated first) → placement.
     // Eliminations arrive as different event types across the three code paths:
