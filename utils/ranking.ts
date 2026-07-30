@@ -7,14 +7,15 @@ export interface Tier {
   color: string; // brand-ish accent for the badge
 }
 
+// The Bluffer's Ladder — you climb by how good a liar you are.
 // Ascending by floor. A tier's ceiling is the next tier's floor.
 export const TIERS: Tier[] = [
-  { name: "Bronze",   floor: 0,    color: "#b07a3c" },
-  { name: "Silver",   floor: 300,  color: "#9aa3ad" },
-  { name: "Gold",     floor: 700,  color: "#f59f0c" },
-  { name: "Platinum", floor: 1200, color: "#1db6bb" },
-  { name: "Diamond",  floor: 1800, color: "#5b8cff" },
-  { name: "Master",   floor: 2500, color: "#de1a62" },
+  { name: "Mark",       floor: 0,    color: "#9aa3ad" }, // the sucker who gets conned
+  { name: "Fibber",     floor: 300,  color: "#b07a3c" },
+  { name: "Bluffer",    floor: 700,  color: "#f59f0c" },
+  { name: "Hustler",    floor: 1200, color: "#1db6bb" },
+  { name: "Shark",      floor: 1800, color: "#5b8cff" },
+  { name: "Con Artist", floor: 2500, color: "#de1a62" },
 ];
 
 export function getTier(trophies: number): Tier {

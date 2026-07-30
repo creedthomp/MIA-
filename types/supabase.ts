@@ -122,6 +122,74 @@ export type Database = {
           },
         ]
       }
+      match_results: {
+        Row: {
+          created_at: string
+          id: string
+          placement: number
+          players_count: number
+          room_id: string
+          trophies_delta: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          placement: number
+          players_count: number
+          room_id: string
+          trophies_delta: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          placement?: number
+          players_count?: number
+          room_id?: string
+          trophies_delta?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_results_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_stats: {
+        Row: {
+          best_streak: number
+          games_ranked: number
+          streak: number
+          trophies: number
+          updated_at: string
+          user_id: string
+          wins: number
+        }
+        Insert: {
+          best_streak?: number
+          games_ranked?: number
+          streak?: number
+          trophies?: number
+          updated_at?: string
+          user_id: string
+          wins?: number
+        }
+        Update: {
+          best_streak?: number
+          games_ranked?: number
+          streak?: number
+          trophies?: number
+          updated_at?: string
+          user_id?: string
+          wins?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -182,6 +250,7 @@ export type Database = {
           host_id: string
           id: string
           max_players: number
+          ranked_finalized: boolean
           status: string
           type: string
         }
@@ -191,6 +260,7 @@ export type Database = {
           host_id: string
           id?: string
           max_players?: number
+          ranked_finalized?: boolean
           status?: string
           type?: string
         }
@@ -200,6 +270,7 @@ export type Database = {
           host_id?: string
           id?: string
           max_players?: number
+          ranked_finalized?: boolean
           status?: string
           type?: string
         }

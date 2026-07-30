@@ -261,7 +261,13 @@ function LeaderboardTab() {
                 <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }} numberOfLines={1}>
                   {isMe ? "You" : r.displayName}
                 </Text>
-                <TierBadge trophies={r.trophies} />
+                {i === 0 ? (
+                  <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1, color: C.secondary, textTransform: "uppercase" }}>
+                    👑 The Mia
+                  </Text>
+                ) : (
+                  <TierBadge trophies={r.trophies} />
+                )}
               </View>
               <Text style={{ fontFamily: MONO, fontSize: 15, fontWeight: "700", color: C.fg }}>
                 {r.trophies}

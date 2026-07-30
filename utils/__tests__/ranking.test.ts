@@ -2,18 +2,18 @@ import { describe, it, expect } from "bun:test";
 import { getTier, tierFloor, placementDelta, streakBonus } from "../ranking";
 
 describe("getTier", () => {
-  it("0 trophies → Bronze", () => expect(getTier(0).name).toBe("Bronze"));
-  it("699 → Silver, 700 → Gold", () => {
-    expect(getTier(699).name).toBe("Silver");
-    expect(getTier(700).name).toBe("Gold");
+  it("0 trophies → Mark", () => expect(getTier(0).name).toBe("Mark"));
+  it("699 → Fibber, 700 → Bluffer", () => {
+    expect(getTier(699).name).toBe("Fibber");
+    expect(getTier(700).name).toBe("Bluffer");
   });
-  it("3000 → Master", () => expect(getTier(3000).name).toBe("Master"));
+  it("3000 → Con Artist", () => expect(getTier(3000).name).toBe("Con Artist"));
 });
 
 describe("tierFloor", () => {
   it("clamps to the bottom of the current tier", () => {
-    expect(tierFloor(850)).toBe(700);  // Gold floor
-    expect(tierFloor(120)).toBe(0);    // Bronze floor
+    expect(tierFloor(850)).toBe(700);  // Bluffer floor
+    expect(tierFloor(120)).toBe(0);    // Mark floor
   });
 });
 
