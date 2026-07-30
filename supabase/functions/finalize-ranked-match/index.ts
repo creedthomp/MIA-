@@ -71,18 +71,23 @@ Deno.serve(async (req: Request) => {
     const n = players.length;
     const winnerId = players.find((p) => p.is_active)?.user_id ?? null;
 
-    // Elimination order (first eliminated first) → placement
-    const { data: elimEvents } = await admin
+    // Elimination order (first eliminated first) → placement.
+    // Eliminations arrive as different event types across the three code paths:
+    //   challenge  → type "life_lost" with payload.isEliminated
+    //   forfeit    → type "forfeit"   with payload.isEliminated
+    //   disconnect → type "disconnected" (always an elimination)
+    // So fetch all events in order and classify in JS.
+    const { data: allEvents } = await admin
       .from("game_events")
-      .select("user_id, created_at")
+      .select("user_id, type, payload, created_at")
       .eq("room_id", roomId)
-      .eq("type", "life_lost")
-      .eq("payload->>isEliminated", "true")
       .order("created_at", { ascending: true });
 
     const eliminated: string[] = [];
-    for (const e of elimEvents ?? []) {
-      if (!eliminated.includes(e.user_id)) eliminated.push(e.user_id);
+    for (const e of allEvents ?? []) {
+      const payload = (e.payload ?? {}) as { isEliminated?: boolean };
+      const isElim = e.type === "disconnected" || payload.isEliminated === true;
+      if (isElim && e.user_id && !eliminated.includes(e.user_id)) eliminated.push(e.user_id);
     }
 
     // rank map: winner = 1, first eliminated = n, last eliminated = 2
