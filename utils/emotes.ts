@@ -21,4 +21,6 @@ export const EMOTES: Record<EmoteId, { emoji: string; phrase: string }> = {
   sweat: { emoji: "😅", phrase: "Getting hot?" },
   taunt: { emoji: "😈", phrase: "Pull it." },
   hurry: { emoji: "😴", phrase: "Any day now." },
+  // Not in EMOTE_IDS — only the current #1 gets it, added to their tray.
+  crown: { emoji: "👑", phrase: "Mia." },
 };

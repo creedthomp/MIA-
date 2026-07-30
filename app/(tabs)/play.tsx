@@ -18,7 +18,8 @@ import { useStore } from "@/services/store";
 import { supabase } from "@/services/supabase";
 import { createRoom, joinByCode, findOrJoinQuickMatch } from "@/services/roomService";
 import { startCheckout, fetchEntitlements } from "@/services/purchases";
-import { fetchGlobalLeaderboard, fetchMyStats, type LeaderRow, type MyStats } from "@/services/leaderboard";
+import { fetchGlobalLeaderboard, fetchMyStats, fetchFriendsLeaderboard, type LeaderRow, type MyStats } from "@/services/leaderboard";
+import { getOrCreateFriendCode, addFriendByCode, fetchIncomingRequests, acceptRequest, removeFriendship, type FriendRequest } from "@/services/friends";
 import { getTier } from "@/utils/ranking";
 
 import { COLORS, FONT } from "@/theme";
@@ -168,8 +169,161 @@ function TierBadge({ trophies, size = 11 }: { trophies: number; size?: number })
   );
 }
 
+// One leaderboard row. `showMiaCrown` labels the global #1 as "the Mia".
+function LeaderRow({ row, index, isMe, showMiaCrown }: { row: LeaderRow; index: number; isMe: boolean; showMiaCrown?: boolean }) {
+  const isMia = showMiaCrown && index === 0;
+  return (
+    <View
+      style={{
+        flexDirection: "row", alignItems: "center",
+        paddingVertical: 11, paddingHorizontal: 14,
+        borderRadius: 10, marginBottom: 6,
+        backgroundColor: isMe ? C.surface2 : "transparent",
+        borderWidth: isMe ? 1 : 0, borderColor: C.accent,
+      }}
+    >
+      <Text style={{ fontFamily: MONO, fontSize: 13, fontWeight: "700", color: index < 3 ? C.warn : C.fgFaint, width: 34 }}>
+        {isMia ? "👑" : `#${index + 1}`}
+      </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }} numberOfLines={1}>
+          {isMe ? "You" : row.displayName}
+        </Text>
+        {isMia ? (
+          <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1, color: C.secondary, textTransform: "uppercase" }}>
+            👑 The Mia
+          </Text>
+        ) : (
+          <TierBadge trophies={row.trophies} />
+        )}
+      </View>
+      <Text style={{ fontFamily: MONO, fontSize: 15, fontWeight: "700", color: C.fg }}>
+        {row.trophies}
+      </Text>
+    </View>
+  );
+}
+
+// Manage friends (code, requests) + the friends-only ranked board.
+function FriendsView({ userId }: { userId: string }) {
+  const [code, setCode] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [friends, setFriends] = useState<LeaderRow[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [tick, setTick] = useState(0);
+  const reload = () => setTick((t) => t + 1);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [c, reqs, board] = await Promise.all([
+        getOrCreateFriendCode(userId),
+        fetchIncomingRequests(userId),
+        fetchFriendsLeaderboard(userId),
+      ]);
+      if (!alive) return;
+      setCode(c); setRequests(reqs); setFriends(board); setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [userId, tick]);
+
+  async function add() {
+    if (input.trim().length < 4) return;
+    setBusy(true); setNotice(null);
+    const { error } = await addFriendByCode(input, userId);
+    setBusy(false);
+    if (error) { setNotice(error); return; }
+    setInput(""); setNotice("Sent! They'll appear here once accepted."); reload();
+  }
+
+  function copyCode() {
+    const nav = (globalThis as { navigator?: { clipboard?: { writeText?: (s: string) => void } } }).navigator;
+    if (code) nav?.clipboard?.writeText?.(code);
+  }
+
+  if (loading) {
+    return <View style={{ padding: 40, alignItems: "center" }}><ActivityIndicator color={C.accent} /></View>;
+  }
+
+  return (
+    <>
+      {/* Your friend code */}
+      <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 18, marginBottom: 14 }}>
+        <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase", marginBottom: 8 }}>
+          Your friend code
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={{ fontFamily: MONO, fontSize: 28, fontWeight: "700", color: C.fg, letterSpacing: 6 }}>{code ?? "—"}</Text>
+          {Platform.OS === "web" && (
+            <TouchableOpacity onPress={copyCode} style={{ borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14 }}>
+              <Text style={{ fontFamily: MONO, fontSize: 12, color: C.accent }}>Copy</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Add by code */}
+      <View style={{ flexDirection: "row", gap: 10, marginBottom: 8 }}>
+        <TextInput
+          value={input}
+          onChangeText={(t) => { setInput(t.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8)); setNotice(null); }}
+          placeholder="Enter a friend's code"
+          placeholderTextColor={C.fgFaint}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          style={{ flex: 1, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, color: C.fg, fontFamily: MONO, fontSize: 15, letterSpacing: 2 }}
+        />
+        <TouchableOpacity
+          onPress={add}
+          disabled={busy || input.trim().length < 4}
+          style={{ backgroundColor: C.accent, borderRadius: 10, paddingHorizontal: 20, alignItems: "center", justifyContent: "center", opacity: busy || input.trim().length < 4 ? 0.5 : 1 }}
+        >
+          {busy ? <ActivityIndicator color={C.onAccent} size="small" /> : <Text style={{ color: C.onAccent, fontWeight: "700", fontSize: 14 }}>Add</Text>}
+        </TouchableOpacity>
+      </View>
+      {notice && <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, marginBottom: 12 }}>{notice}</Text>}
+
+      {/* Incoming requests */}
+      {requests.length > 0 && (
+        <View style={{ marginTop: 12, marginBottom: 4 }}>
+          <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.warn, textTransform: "uppercase", marginBottom: 8 }}>
+            Requests ({requests.length})
+          </Text>
+          {requests.map((req) => (
+            <View key={req.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8 }}>
+              <Text style={{ flex: 1, fontSize: 15, color: C.fg }} numberOfLines={1}>{req.fromName}</Text>
+              <TouchableOpacity onPress={async () => { await acceptRequest(req.id); reload(); }} style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
+                <Text style={{ fontFamily: MONO, fontSize: 12, color: C.accent }}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={async () => { await removeFriendship(req.id); reload(); }} style={{ paddingHorizontal: 8, paddingVertical: 6 }}>
+                <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgFaint }}>Decline</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Friends ranked board */}
+      <View style={{ height: 1, backgroundColor: C.borderSoft, marginVertical: 18 }} />
+      {friends.length <= 1 ? (
+        <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgFaint, textAlign: "center", marginTop: 8 }}>
+          Add friends by code to see how you stack up.
+        </Text>
+      ) : (
+        friends.map((r, i) => (
+          <LeaderRow key={r.userId} row={r} index={i} isMe={r.userId === userId} />
+        ))
+      )}
+    </>
+  );
+}
+
 function LeaderboardTab() {
   const { user } = useStore();
+  const [board, setBoard] = useState<"global" | "friends">("global");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [mine, setMine] = useState<MyStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -177,104 +331,90 @@ function LeaderboardTab() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [board, my] = await Promise.all([
+      const [b, my] = await Promise.all([
         fetchGlobalLeaderboard(100),
         user ? fetchMyStats(user.id) : Promise.resolve(null),
       ]);
       if (!alive) return;
-      setRows(board);
+      setRows(b);
       setMine(my);
       setLoading(false);
     })();
     return () => { alive = false; };
   }, [user?.id]);
 
-  const myRank = user ? rows.findIndex((r) => r.userId === user.id) + 1 : 0; // 0 = unranked/not in top list
+  const myRank = user ? rows.findIndex((r) => r.userId === user.id) + 1 : 0;
 
-  if (loading) {
+  const Pill = ({ id, label }: { id: "global" | "friends"; label: string }) => {
+    const on = board === id;
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color={C.accent} />
-      </View>
+      <TouchableOpacity
+        onPress={() => setBoard(id)}
+        style={{ flex: 1, paddingVertical: 9, borderRadius: 999, alignItems: "center", backgroundColor: on ? C.accent : "transparent", borderWidth: 1, borderColor: on ? C.accent : C.border }}
+      >
+        <Text style={{ fontFamily: MONO, fontSize: 12, color: on ? C.onAccent : C.fgMuted, fontWeight: on ? "700" : "400" }}>{label}</Text>
+      </TouchableOpacity>
     );
-  }
+  };
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 56 }}>
       <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 4, color: C.accent, textTransform: "uppercase", marginBottom: 8 }}>
-        Global ladder
+        {board === "global" ? "Global ladder" : "Your friends"}
       </Text>
-      <Text style={{ fontSize: 26, fontWeight: "700", color: C.fg, letterSpacing: -0.5, marginBottom: 20 }}>
+      <Text style={{ fontSize: 26, fontWeight: "700", color: C.fg, letterSpacing: -0.5, marginBottom: 18 }}>
         Leaderboard
       </Text>
 
-      {/* Your standing */}
-      <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 18, marginBottom: 24 }}>
-        {mine && mine.gamesRanked > 0 ? (
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View style={{ flex: 1 }}>
-              <TierBadge trophies={mine.trophies} size={12} />
-              <Text style={{ fontSize: 30, fontWeight: "800", color: C.fg, letterSpacing: -1, marginTop: 6 }}>
-                {mine.trophies} <Text style={{ fontSize: 15, fontWeight: "600", color: C.fgFaint }}>trophies</Text>
-              </Text>
-              <Text style={{ fontFamily: MONO, fontSize: 11, color: C.fgMuted, marginTop: 4 }}>
-                {mine.wins}W · {mine.gamesRanked} played{mine.streak >= 2 ? ` · ${mine.streak}🔥` : ""}
-              </Text>
-            </View>
-            {myRank > 0 && (
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontFamily: MONO, fontSize: 10, color: C.fgFaint, letterSpacing: 1 }}>RANK</Text>
-                <Text style={{ fontSize: 26, fontWeight: "800", color: C.accent }}>#{myRank}</Text>
-              </View>
-            )}
-          </View>
-        ) : (
-          <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, lineHeight: 18 }}>
-            Play a <Text style={{ color: C.accent }}>Quick Match</Text> to join the ladder. Only quick matches are ranked.
-          </Text>
-        )}
+      {/* Global / Friends toggle */}
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 22 }}>
+        <Pill id="global" label="Global" />
+        <Pill id="friends" label="Friends" />
       </View>
 
-      {/* Top players */}
-      {rows.length === 0 ? (
-        <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgFaint, textAlign: "center", marginTop: 12 }}>
-          No ranked games yet — be the first.
-        </Text>
+      {board === "friends" ? (
+        user ? <FriendsView userId={user.id} /> : null
+      ) : loading ? (
+        <View style={{ padding: 40, alignItems: "center" }}><ActivityIndicator color={C.accent} /></View>
       ) : (
-        rows.map((r, i) => {
-          const isMe = user?.id === r.userId;
-          return (
-            <View
-              key={r.userId}
-              style={{
-                flexDirection: "row", alignItems: "center",
-                paddingVertical: 11, paddingHorizontal: 14,
-                borderRadius: 10, marginBottom: 6,
-                backgroundColor: isMe ? C.surface2 : "transparent",
-                borderWidth: isMe ? 1 : 0, borderColor: C.accent,
-              }}
-            >
-              <Text style={{ fontFamily: MONO, fontSize: 13, fontWeight: "700", color: i < 3 ? C.warn : C.fgFaint, width: 34 }}>
-                {i === 0 ? "👑" : `#${i + 1}`}
-              </Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: "600", color: C.fg }} numberOfLines={1}>
-                  {isMe ? "You" : r.displayName}
-                </Text>
-                {i === 0 ? (
-                  <Text style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1, color: C.secondary, textTransform: "uppercase" }}>
-                    👑 The Mia
+        <>
+          {/* Your standing */}
+          <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 18, marginBottom: 24 }}>
+            {mine && mine.gamesRanked > 0 ? (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{ flex: 1 }}>
+                  <TierBadge trophies={mine.trophies} size={12} />
+                  <Text style={{ fontSize: 30, fontWeight: "800", color: C.fg, letterSpacing: -1, marginTop: 6 }}>
+                    {mine.trophies} <Text style={{ fontSize: 15, fontWeight: "600", color: C.fgFaint }}>trophies</Text>
                   </Text>
-                ) : (
-                  <TierBadge trophies={r.trophies} />
+                  <Text style={{ fontFamily: MONO, fontSize: 11, color: C.fgMuted, marginTop: 4 }}>
+                    {mine.wins}W · {mine.gamesRanked} played{mine.streak >= 2 ? ` · ${mine.streak}🔥` : ""}
+                  </Text>
+                </View>
+                {myRank > 0 && (
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ fontFamily: MONO, fontSize: 10, color: C.fgFaint, letterSpacing: 1 }}>RANK</Text>
+                    <Text style={{ fontSize: 26, fontWeight: "800", color: C.accent }}>#{myRank}</Text>
+                  </View>
                 )}
               </View>
-              <Text style={{ fontFamily: MONO, fontSize: 15, fontWeight: "700", color: C.fg }}>
-                {r.trophies}
+            ) : (
+              <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgMuted, lineHeight: 18 }}>
+                Play a <Text style={{ color: C.accent }}>Quick Match</Text> to join the ladder. Only quick matches are ranked.
               </Text>
-            </View>
-          );
-        })
+            )}
+          </View>
+
+          {rows.length === 0 ? (
+            <Text style={{ fontFamily: MONO, fontSize: 12, color: C.fgFaint, textAlign: "center", marginTop: 12 }}>
+              No ranked games yet — be the first.
+            </Text>
+          ) : (
+            rows.map((r, i) => (
+              <LeaderRow key={r.userId} row={r} index={i} isMe={user?.id === r.userId} showMiaCrown />
+            ))
+          )}
+        </>
       )}
     </ScrollView>
   );
