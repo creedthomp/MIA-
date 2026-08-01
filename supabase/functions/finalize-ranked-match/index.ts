@@ -43,6 +43,27 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
+    // Participants + winner FIRST (read-only). is_active is service-role-
+    // authoritative (clients can't write it), so a genuinely finished game has
+    // exactly one active player — the winner. Checking before we claim means a
+    // host who flips status early can't burn the one-time claim and block the
+    // real result from ever scoring.
+    const { data: players } = await admin
+      .from("room_players")
+      .select("user_id, is_active")
+      .eq("room_id", roomId);
+    if (!players || players.length < 2) throw new Error("Not enough players");
+
+    const active = players.filter((p) => p.is_active);
+    if (active.length !== 1) {
+      return new Response(JSON.stringify({ skipped: true, reason: "no single winner" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const n = players.length;
+    const winnerId = active[0].user_id;
+
     // Atomic claim: only ranked (quickmatch), finished, not-yet-scored rooms.
     // If no row comes back, another caller already handled it (or it's unranked).
     const { data: claimed } = await admin
@@ -60,26 +81,6 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Participants + winner. is_active is service-role-authoritative (clients
-    // can't write it), so a genuinely finished game has exactly one active
-    // player — the winner. Anything else means the room wasn't really won
-    // (e.g. a host flipped status early), so don't award trophies.
-    const { data: players } = await admin
-      .from("room_players")
-      .select("user_id, is_active")
-      .eq("room_id", roomId);
-    if (!players || players.length < 2) throw new Error("Not enough players");
-
-    const active = players.filter((p) => p.is_active);
-    if (active.length !== 1) {
-      return new Response(JSON.stringify({ skipped: true, reason: "no single winner" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const n = players.length;
-    const winnerId = active[0].user_id;
 
     // Elimination order (first eliminated first) → placement.
     // Eliminations arrive as different event types across the three code paths:
