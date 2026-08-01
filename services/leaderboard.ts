@@ -96,6 +96,15 @@ export async function fetchIsMia(userId: string): Promise<boolean> {
   return !!top && top.games_ranked > 0 && top.user_id === userId;
 }
 
+// Exact global rank (works even when you're outside the top 100).
+export async function fetchGlobalRank(trophies: number): Promise<number> {
+  const { count } = await db
+    .from("player_stats")
+    .select("user_id", { count: "exact", head: true })
+    .gt("trophies", trophies);
+  return (count ?? 0) + 1;
+}
+
 export async function fetchMyStats(userId: string): Promise<MyStats | null> {
   const { data } = await db
     .from("player_stats")

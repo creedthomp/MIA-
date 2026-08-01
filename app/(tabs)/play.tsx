@@ -18,7 +18,7 @@ import { useStore } from "@/services/store";
 import { supabase } from "@/services/supabase";
 import { createRoom, joinByCode, findOrJoinQuickMatch } from "@/services/roomService";
 import { startCheckout, fetchEntitlements } from "@/services/purchases";
-import { fetchGlobalLeaderboard, fetchMyStats, fetchFriendsLeaderboard, type LeaderRow, type MyStats } from "@/services/leaderboard";
+import { fetchGlobalLeaderboard, fetchMyStats, fetchFriendsLeaderboard, fetchGlobalRank, type LeaderRow, type MyStats } from "@/services/leaderboard";
 import { getOrCreateFriendCode, addFriendByCode, fetchIncomingRequests, acceptRequest, removeFriendship, type FriendRequest } from "@/services/friends";
 import { getTier } from "@/utils/ranking";
 
@@ -326,6 +326,7 @@ function LeaderboardTab() {
   const [board, setBoard] = useState<"global" | "friends">("global");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [mine, setMine] = useState<MyStats | null>(null);
+  const [myRank, setMyRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -339,11 +340,14 @@ function LeaderboardTab() {
       setRows(b);
       setMine(my);
       setLoading(false);
+      // Exact rank (accurate even when you're outside the top 100)
+      if (my && my.gamesRanked > 0) {
+        const rank = await fetchGlobalRank(my.trophies);
+        if (alive) setMyRank(rank);
+      }
     })();
     return () => { alive = false; };
   }, [user?.id]);
-
-  const myRank = user ? rows.findIndex((r) => r.userId === user.id) + 1 : 0;
 
   const Pill = ({ id, label }: { id: "global" | "friends"; label: string }) => {
     const on = board === id;
@@ -391,7 +395,7 @@ function LeaderboardTab() {
                     {mine.wins}W · {mine.gamesRanked} played{mine.streak >= 2 ? ` · ${mine.streak}🔥` : ""}
                   </Text>
                 </View>
-                {myRank > 0 && (
+                {myRank != null && (
                   <View style={{ alignItems: "center" }}>
                     <Text style={{ fontFamily: MONO, fontSize: 10, color: C.fgFaint, letterSpacing: 1 }}>RANK</Text>
                     <Text style={{ fontSize: 26, fontWeight: "800", color: C.accent }}>#{myRank}</Text>

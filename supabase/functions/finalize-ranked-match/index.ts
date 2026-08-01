@@ -100,10 +100,12 @@ Deno.serve(async (req: Request) => {
       if (isElim && e.user_id && !eliminated.includes(e.user_id)) eliminated.push(e.user_id);
     }
 
-    // rank map: winner = 1, first eliminated = n, last eliminated = 2
+    // rank map: winner = 1, first eliminated = n, last eliminated = 2.
+    // Exclude the winner from the elimination list defensively so a stray
+    // (forged) elimination event for them can't overwrite rank 1.
     const rankOf: Record<string, number> = {};
-    if (winnerId) rankOf[winnerId] = 1;
-    eliminated.forEach((uid, i) => { rankOf[uid] = n - i; });
+    rankOf[winnerId] = 1;
+    eliminated.filter((uid) => uid !== winnerId).forEach((uid, i) => { rankOf[uid] = n - i; });
     // Any participant somehow missing a rank → drop into the next open slot
     let fill = 2;
     for (const p of players) {
