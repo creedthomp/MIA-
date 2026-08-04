@@ -18,7 +18,8 @@ export type EmoteId =
   | "sweat"
   | "taunt"
   | "liar"
-  | "hurry";
+  | "hurry"
+  | "crown"; // exclusive to the current global #1 ("the Mia")
 
 export interface EmotePayload {
   userId: string;

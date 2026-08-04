@@ -23,6 +23,8 @@ import { VerdictSheet } from "@/components/game2/VerdictSheet";
 import type { TablePlayer } from "@/components/game2/PlayerPlaque";
 import { DeclarationInput } from "@/components/game/DeclarationInput";
 import { EmotePicker } from "@/components/game/EmotePicker";
+import { fetchIsMia } from "@/services/leaderboard";
+import { sendRequest } from "@/services/friends";
 import type { Player, Declaration, Roll } from "@/types/game";
 import type { ChallengeResolvedPayload, EmoteId } from "@/types/realtimeEvents";
 
@@ -80,8 +82,12 @@ export default function GameScreen() {
   const [challengerName, setChallengerName] = useState<string | null>(null);
   const [roundKey, setRoundKey] = useState(0); // bumped each round to reset DeclarationInput
   const [activeEmotes, setActiveEmotes] = useState<Record<string, { emote: EmoteId; key: number }>>({});
+  const [isMia, setIsMia] = useState(false); // current global #1 gets the crown emote
+  const [friendAdded, setFriendAdded] = useState<Set<string>>(new Set());
 
   const startingRef = useRef(false);
+  const isRankedRef = useRef(false);
+  const finalizedRef = useRef(false);
   const verdictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const verdictAutoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const verdictHandledRef = useRef(false);
@@ -139,12 +145,13 @@ export default function GameScreen() {
     async function setup() {
       const { data: room } = await supabase
         .from("rooms")
-        .select("host_id")
+        .select("host_id, type")
         .eq("id", roomId)
         .single();
 
       if (!room) { router.back(); return; }
       const isHost = room.host_id === userId;
+      isRankedRef.current = room.type === "quickmatch";
 
       const { data: rp } = await supabase
         .from("room_players")
@@ -168,6 +175,7 @@ export default function GameScreen() {
 
       initGame(players, userId);
       setLoading(false);
+      fetchIsMia(userId).then(setIsMia);
 
       await subscribeToGame(
         roomId,
@@ -246,6 +254,16 @@ export default function GameScreen() {
         if (userId) {
           setFlashUserId(userId);
           setTimeout(() => setFlashUserId(null), 800);
+        }
+        break;
+      }
+
+      case "GAME_OVER": {
+        // Score the ranked match. Every client fires this; the edge function
+        // atomically claims the room so it runs exactly once.
+        if (isRankedRef.current && !finalizedRef.current) {
+          finalizedRef.current = true;
+          supabase.functions.invoke("finalize-ranked-match", { body: { roomId } });
         }
         break;
       }
@@ -512,11 +530,40 @@ export default function GameScreen() {
             <Text style={{ color: C.fg, fontSize: 26, fontWeight: "800", letterSpacing: -0.5, marginBottom: 6, textAlign: "center" }}>
               {winner?.userId === user?.id ? "You win." : `${winner?.displayName ?? "Someone"} wins.`}
             </Text>
-            <Text style={{ fontFamily: MONO, color: C.fgMuted, fontSize: 12, marginBottom: 26 }}>
+            <Text style={{ fontFamily: MONO, color: C.fgMuted, fontSize: 12, marginBottom: 22 }}>
               Last one standing.
             </Text>
+
+            {/* Add players you just played (ranked lobbies = strangers) */}
+            {isRankedRef.current && gamePlayers.some((p) => p.userId !== user?.id) && (
+              <View style={{ alignSelf: "stretch", marginBottom: 22 }}>
+                <Text style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 2, color: C.fgFaint, textTransform: "uppercase", marginBottom: 8 }}>
+                  Add players
+                </Text>
+                {gamePlayers.filter((p) => p.userId !== user?.id).map((p) => {
+                  const added = friendAdded.has(p.userId);
+                  return (
+                    <View key={p.userId} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 7 }}>
+                      <Text style={{ flex: 1, color: C.fg, fontSize: 14 }} numberOfLines={1}>{p.displayName}</Text>
+                      <TouchableOpacity
+                        disabled={added}
+                        onPress={async () => {
+                          if (!user) return;
+                          setFriendAdded((prev) => new Set(prev).add(p.userId));
+                          await sendRequest(p.userId, user.id);
+                        }}
+                        style={{ borderWidth: 1, borderColor: added ? C.border : C.accent, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 14 }}
+                      >
+                        <Text style={{ fontFamily: MONO, fontSize: 12, color: added ? C.fgFaint : C.accent }}>{added ? "Sent" : "+ Add"}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
             <TouchableOpacity
-              style={{ backgroundColor: C.accent, borderRadius: 10, paddingVertical: 13, paddingHorizontal: 40 }}
+              style={{ backgroundColor: C.accent, borderRadius: 10, paddingVertical: 13, paddingHorizontal: 40, alignSelf: "stretch", alignItems: "center" }}
               onPress={() => router.back()}
             >
               <Text style={{ color: C.onAccent, fontWeight: "600", fontSize: 15 }}>Back to Lobby</Text>
@@ -603,7 +650,7 @@ export default function GameScreen() {
           revealRoll={revealData ? (revealData.revealedRoll as Roll) : null}
           emotes={activeEmotes}
         />
-        <EmotePicker onSend={sendEmote} />
+        <EmotePicker onSend={sendEmote} bonusIds={isMia ? ["crown"] : undefined} />
       </View>
 
       {/* ── Declaration input — right below the table ── */}

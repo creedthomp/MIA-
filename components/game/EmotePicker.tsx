@@ -18,9 +18,11 @@ const COOLDOWN_MS = 4000;
 
 interface EmotePickerProps {
   onSend: (emote: EmoteId) => void;
+  bonusIds?: EmoteId[]; // extra emotes (e.g. the #1 crown) appended to the tray
 }
 
-export function EmotePicker({ onSend }: EmotePickerProps) {
+export function EmotePicker({ onSend, bonusIds }: EmotePickerProps) {
+  const trayIds = bonusIds && bonusIds.length ? [...EMOTE_IDS, ...bonusIds] : EMOTE_IDS;
   const [open, setOpen] = useState(false);
   const [coolingDown, setCoolingDown] = useState(false);
   const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,7 +78,7 @@ export function EmotePicker({ onSend }: EmotePickerProps) {
         ]}
         pointerEvents={open ? "auto" : "none"}
       >
-        {EMOTE_IDS.map((id) => (
+        {trayIds.map((id) => (
           <TouchableOpacity
             key={id}
             onPress={() => handlePick(id)}

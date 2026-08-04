@@ -5,7 +5,7 @@
 ## Game Rules
 
 ### Overview
-2–10 players. Each player starts with 5 lives. Players take turns rolling two dice under a cup, peeking privately, and declaring a value. You can lie. Players can challenge the previous roll before taking their turn. Last player with lives wins.
+2–6 players. Each player starts with 5 lives. Players take turns rolling two dice under a cup, peeking privately, and declaring a value. You can lie. Players can challenge the previous roll before taking their turn. Last player with lives wins.
 
 ### Reading a Roll
 Always read the higher die first. Rolling a 2 and a 6 = **62**, not 26.
@@ -111,3 +111,28 @@ Game state during an active round is handled via Supabase Realtime broadcast (ep
 | `types/` | TypeScript type definitions shared across the whole codebase |
 
 **`services/` vs `utils/`** — the key distinction: `services/` files make network calls or mutate state; `utils/` files are pure functions that just take inputs and return outputs. You can call a `utils/` function without a Supabase connection.
+
+---
+
+## Leaderboard & Ranking
+
+**Ranked = Quick Match only.** Private games never affect trophies (prevents collusion/farming).
+
+### Tables (migrations `20240010`–`20240012`)
+- `player_stats` — `trophies`, `games_ranked`, `wins`, `streak`, `best_streak`. World-readable to authenticated (the ladder); **no client write policy** — only the finalize edge function (service role) writes.
+- `match_results` — per-game placement/delta history (feeds a future "this month" view). Read own only.
+- `friendships` — `requester_id`/`addressee_id`/`status` (`pending`|`accepted`). Insert must be `pending`; only the addressee can accept; either party can delete.
+- `profiles.friend_code` — short shareable code (generated lazily client-side).
+- `rooms.ranked_finalized` — idempotency guard so scoring runs once.
+
+### Scoring (`utils/ranking.ts`, mirrored in `finalize-ranked-match`)
+Placement, not win/lose: your delta = (players you outlast − players who outlast you) × `K` (8). Scales with lobby size, so a 6-player win (+40) ≫ a 2-player win (+8). Losses are **softened** (halved) and clamped to your **tier floor** (you can't drop out of a tier). Winner gets a **streak bonus**: +5 per win past the 2nd, capped +25. (MiA!-win bonus is a planned follow-up — needs a game-logic flag.)
+
+### Tiers — the Bluffer's Ladder
+Mark → Fibber → Bluffer → Hustler → Shark → Con Artist (floors 0/300/700/1200/1800/2500). The current global **#1 is "the Mia"** (king-of-the-hill) and gets an exclusive 👑 crown emote appended to their in-game picker (`fetchIsMia`).
+
+### Friends
+Add by **friend code** (auto-accepts if a mutual request already exists) or **"+ Add" from the ranked game-over screen**. Global + Friends leaderboards share one row component; the Friends board includes you + accepted friends (0-game friends show at 0).
+
+### Security model (why this can't be cheated) — see `20240012`
+Trophies are only ever written by the service-role finalize function. It derives the **winner from `room_players.is_active`**, which is authoritative because clients can only update `turn_order` (column-restricted grant) — never `is_active`/`lives`. Finalize requires **exactly one active player** before awarding anything (a host flipping `status` early scores nothing). Placement order comes from `game_events`, but clients can only insert their **own** rows and finalize dedups on the *first* elimination per user, so a player can only ever worsen their own standing. An atomic `ranked_finalized` claim makes it run once even though every client fires it on `GAME_OVER`.
