@@ -17,25 +17,28 @@ const MONO = FONT.brand;
 const C = COLORS;
 
 export const PLAQUE_W = 78;
-const AVATAR = 46;
-const CHAR_H = 46; // seated character (filler stick figure) height
+// Rectangular portrait frame (poker-app style) — the character lives INSIDE
+// this rect, so it can never spill onto the felt.
+const PORTRAIT_W = 54;
+const PORTRAIT_H = 58;
+const RADIUS = 12;
 
 export interface TablePlayer {
   id: string;
   name: string;
   lives: number;
   isActive: boolean;
-  characterId?: string; // real character art later; undefined → filler figure
+  characterId?: string; // real character art later; undefined → filler bust
 }
 
 interface PlayerPlaqueProps {
   player: TablePlayer;
   isCurrent: boolean;
   isMe: boolean;
-  x: number; // avatar center
+  x: number; // portrait center
   y: number;
   flashing: boolean;
-  callText: string | null; // declaration chip above the avatar
+  callText: string | null; // declaration chip above the portrait
 }
 
 export function PlayerPlaque({
@@ -93,7 +96,7 @@ export function PlayerPlaque({
       style={{
         position: "absolute",
         left: x - PLAQUE_W / 2,
-        top: y - AVATAR / 2,
+        top: y - PORTRAIT_H / 2,
         width: PLAQUE_W,
         alignItems: "center",
         opacity: player.isActive ? 1 : 0.32,
@@ -101,25 +104,20 @@ export function PlayerPlaque({
       }}
       pointerEvents="none"
     >
-      {/* Seated character — filler stick figure now; real art via characterId.
-          Declared first so it paints behind the avatar/nameplate. */}
-      <View style={{ position: "absolute", top: -(CHAR_H - AVATAR * 0.4), left: 0, right: 0, alignItems: "center" }}>
-        <PlayerCharacter seed={player.id} characterId={player.characterId} size={CHAR_H} />
-      </View>
-
       {/* Declaration chip */}
       <Animated.View
         style={[
           chipStyle,
           {
             position: "absolute",
-            top: -32,
+            top: -30,
             backgroundColor: "#0d0e11",
             borderWidth: 1,
             borderColor: C.accent,
             borderRadius: 8,
             paddingHorizontal: 9,
             paddingVertical: 4,
+            zIndex: 2,
           },
         ]}
       >
@@ -128,7 +126,7 @@ export function PlayerPlaque({
         </Text>
       </Animated.View>
 
-      {/* Turn ring */}
+      {/* Turn ring — rectangular, hugs the portrait */}
       {isCurrent && (
         <Animated.View
           style={[
@@ -136,9 +134,9 @@ export function PlayerPlaque({
             {
               position: "absolute",
               top: -5,
-              width: AVATAR + 10,
-              height: AVATAR + 10,
-              borderRadius: (AVATAR + 10) / 2,
+              width: PORTRAIT_W + 10,
+              height: PORTRAIT_H + 10,
+              borderRadius: RADIUS + 5,
               borderWidth: 2,
               borderColor: C.accent,
             },
@@ -146,17 +144,17 @@ export function PlayerPlaque({
         />
       )}
 
-      {/* Avatar */}
+      {/* Portrait frame — character clipped inside */}
       <View
         style={{
-          width: AVATAR,
-          height: AVATAR,
-          borderRadius: AVATAR / 2,
+          width: PORTRAIT_W,
+          height: PORTRAIT_H,
+          borderRadius: RADIUS,
           backgroundColor: isCurrent ? "#0e2b2c" : C.card,
           borderWidth: 1.5,
           borderColor: isCurrent ? C.accent : isMe ? "#575b63" : C.edge,
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "flex-end",
           overflow: "hidden",
           shadowColor: isCurrent ? C.accent : "#000",
           shadowOffset: { width: 0, height: isCurrent ? 0 : 3 },
@@ -165,9 +163,13 @@ export function PlayerPlaque({
           elevation: isCurrent ? 9 : 4,
         }}
       >
-        <Text style={{ color: C.fg, fontWeight: "700", fontSize: 18 }}>
-          {player.name.charAt(0).toUpperCase()}
-        </Text>
+        <PlayerCharacter
+          seed={player.id}
+          characterId={player.characterId}
+          width={PORTRAIT_W - 6}
+          height={PORTRAIT_H - 8}
+        />
+        {/* Life-lost flash */}
         <Animated.View
           style={[
             flashStyle,
@@ -175,7 +177,7 @@ export function PlayerPlaque({
               position: "absolute",
               top: 0, left: 0, right: 0, bottom: 0,
               backgroundColor: C.danger,
-              borderRadius: AVATAR / 2,
+              borderRadius: RADIUS - 1,
             },
           ]}
         />
