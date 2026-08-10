@@ -9,6 +9,7 @@ import Animated, {
   withRepeat,
   Easing,
 } from "react-native-reanimated";
+import { PlayerCharacter } from "./PlayerCharacter";
 
 import { COLORS, FONT } from "@/theme";
 
@@ -17,12 +18,14 @@ const C = COLORS;
 
 export const PLAQUE_W = 78;
 const AVATAR = 46;
+const CHAR_H = 46; // seated character (filler stick figure) height
 
 export interface TablePlayer {
   id: string;
   name: string;
   lives: number;
   isActive: boolean;
+  characterId?: string; // real character art later; undefined → filler figure
 }
 
 interface PlayerPlaqueProps {
@@ -98,6 +101,12 @@ export function PlayerPlaque({
       }}
       pointerEvents="none"
     >
+      {/* Seated character — filler stick figure now; real art via characterId.
+          Declared first so it paints behind the avatar/nameplate. */}
+      <View style={{ position: "absolute", top: -(CHAR_H - AVATAR * 0.4), left: 0, right: 0, alignItems: "center" }}>
+        <PlayerCharacter seed={player.id} characterId={player.characterId} size={CHAR_H} />
+      </View>
+
       {/* Declaration chip */}
       <Animated.View
         style={[

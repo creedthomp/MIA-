@@ -1,0 +1,107 @@
+# MiA! — Emote Spec (art + voice)
+
+A brief for producing emote graphics and wiring their voice lines. Self-contained — everything an art/audio agent needs is here.
+
+## What an emote is
+
+Each emote = **art** (a character expression) + a **phrase** (rendered by the app, *not* baked into the image) + an optional **voice clip**. Voice clips already exist in `assets/sounds/female/` and `assets/sounds/male/`; each player is assigned a **voice (female or male)**, and an emote plays that player's clip for its category. A global **mute setting** (`emotesMuted`) silences all emote audio.
+
+Emotes appear as a small speech-bubble pop next to a player's avatar during a game (dice bluffing game, 2–6 players: roll in secret, declare or lie, "pull it" to challenge).
+
+## Art direction
+
+- **One recurring character** shown in every expression — a sly gambler / dice mascot. Establishing this character is part of the job (the game has no mascot yet). It should feel like it belongs at a shady card table.
+- **Style:** bold, flat, high-contrast, a little cheeky — matches the app's "color-block arcade" brand. Brand palette: teal `#1DB6BB`, magenta `#DE1A62`, amber `#F59F0C`, warm ink `#232222`, cream `#F7F3EC`. Font vibe: Poppins.
+- **Format:** transparent-background PNG, delivered at **512×512** (shown ~64px in-game, so must read at small size — strong silhouette, exaggerated expression, minimal fine detail).
+- **No text in the image** — the app overlays the phrase. Deliver the character only.
+- Emoji in the tables below are **placeholders** standing in for the intended expression; replace them with real art.
+
+## Voice system
+
+- Categories present in **both** voices: Affirmation, Cheering, Laughing, Crying, Objection, Thinking, Erm, Exertion, Idle, Reaction.
+- **Female-only:** Booing, Attacking · **Male-only:** Pain, Screaming.
+- Where a gender lacks the ideal category, a **fallback** clip is specified (marked `*`). Filenames below are exact; prefix with `assets/sounds/female/` or `assets/sounds/male/`.
+
+---
+
+## Voice emotes
+
+| id | expression (placeholder) | phrase | category | female clip | male clip | fires when |
+|----|------|--------|----------|-------------|-----------|------------|
+| `objection` | ⚖️ finger jabbed forward, dramatic lean | "Objection!" | Objection | Female Type 1 Objection 1.wav | Male Type 2 Objection 4.wav | pulling it / calling a bluff — the signature emote |
+| `boo` | 👎 thumbs down, scrunched scowl | "Booo." | Booing | Female Type 1 Booing 1.wav | Male Type 1 Reaction 56.wav * | mocking a caught liar |
+| `cheer` | 🙌 arms up, eyes-shut grin | "Let's go!" | Cheering | Female Type 1 Cheering 3.wav | Male Type 1 Cheering 2.wav | after a win or a clean pull |
+| `cry` | 😭 mock-sobbing, wiping a fake tear | "Cry about it." | Crying | Female Type 1 Crying 3.wav | Male Type 2 Crying 8.wav | after knocking someone down |
+| `think` | 🤔 hand on chin, one eye squinted | "Hmmmm…" | Thinking | Female Type 1 Thinking 10.wav | Male Type 2 Thinking 25.wav | sizing up a fishy declaration |
+| `trust` | 😏 hand on heart, sly half-smile | "Trust me." | Affirmation | Female Type 1 Affirmation 9.wav | Male Type 1 Affirmation 24.wav | the confident liar |
+| `erm` | 😬 side-eye grimace, teeth clenched | "Ermmm…" | Erm | Female Type 1 Erm 3.wav | Male Type 1 Erm 24.wav | reacting to a sketchy call |
+| `noway` | 😱 hands on cheeks, wide eyes | "No way!" | Reaction | Female Type 1 Reaction 3.wav | Male Type 1 Reaction 25.wav | shock at a reveal |
+| `pain` | 🤕 mock-wince, hand to chest | "That hurt?" | Pain | Female Type 1 Crying 3.wav * | Male Type 2 Pain 3.wav | after they lose lives |
+| `laugh` | 😂 head back, big laugh | "Ha!" | Laughing | Female Type 1 Laughing 5.wav | Male Type 2 Laughing 3.wav | mock laughter |
+| `sweat` | 😅 nervous grin, single sweat drop | "Getting hot?" | Exertion | Female Type 1 Exertion 12.wav | Male Type 2 Exertion 7.wav | needling someone under pressure |
+| `idle` | 🥱 slumped, bored yawn | "Any day now…" | Idle | Female Type 1 Idle 4.wav | Male Type 2 Idle 6.wav | poking a slow player |
+| `scream` | 😱 head thrown back, screaming | "NOOO!" | Screaming | Female Type 1 Reaction 3.wav * | Male Type 2 Screaming 1.wav | dramatic despair on elimination |
+| `attack` | 😤 leaning in, aggressive point | "Come at me." | Attacking | Female Type 1 Attacking 21.wav | Male Type 2 Exertion 7.wav * | daring an opponent to challenge |
+
+`*` = fallback clip (that voice has no clip in the ideal category).
+
+## Silent emotes (art + phrase, no voice)
+
+Good for rapid spam without audio fatigue.
+
+| id | expression (placeholder) | phrase | fires when |
+|----|------|--------|------------|
+| `watching` | 👀 eyes darting, sly look | "I'm watching." | reading tells |
+| `clown` | 🤡 slow sarcastic clap | "Nice bluff." | sarcastic clap-back |
+| `mia` | 🤯 mind-blown, jaw dropped | "A *Mia*?!" | reacting to a Mia (2·1) call |
+| `gg` | 🤝 tipping a hat / handshake | "GG." | sportsmanship at game-over |
+| `salty` | 🧂 shaking a salt shaker | "Salty?" | poking a tilted opponent |
+| `slow` | 🐌 tapping a wrist/watch | "…" | pure visual gag for a slow player |
+
+## Special
+
+| id | expression | phrase | note |
+|----|------|--------|------|
+| `crown` | 👑 wearing the crown, smug | "Mia." | **Exclusive to the current global #1** ("the Mia"). Voice: Cheering (F: Cheering 3 / M: Cheering 2). |
+
+---
+
+## JSON manifest (for implementation)
+
+```json
+{
+  "art": { "size": 512, "format": "png-transparent", "textInImage": false },
+  "voices": ["female", "male"],
+  "soundBase": "assets/sounds",
+  "emotes": [
+    { "id": "objection", "phrase": "Objection!", "category": "objection", "sound": { "female": "female/Female Type 1 Objection 1.wav", "male": "male/Male Type 2 Objection 4.wav" } },
+    { "id": "boo", "phrase": "Booo.", "category": "booing", "sound": { "female": "female/Female Type 1 Booing 1.wav", "male": "male/Male Type 1 Reaction 56.wav", "maleFallback": true } },
+    { "id": "cheer", "phrase": "Let's go!", "category": "cheering", "sound": { "female": "female/Female Type 1 Cheering 3.wav", "male": "male/Male Type 1 Cheering 2.wav" } },
+    { "id": "cry", "phrase": "Cry about it.", "category": "crying", "sound": { "female": "female/Female Type 1 Crying 3.wav", "male": "male/Male Type 2 Crying 8.wav" } },
+    { "id": "think", "phrase": "Hmmmm…", "category": "thinking", "sound": { "female": "female/Female Type 1 Thinking 10.wav", "male": "male/Male Type 2 Thinking 25.wav" } },
+    { "id": "trust", "phrase": "Trust me.", "category": "affirmation", "sound": { "female": "female/Female Type 1 Affirmation 9.wav", "male": "male/Male Type 1 Affirmation 24.wav" } },
+    { "id": "erm", "phrase": "Ermmm…", "category": "erm", "sound": { "female": "female/Female Type 1 Erm 3.wav", "male": "male/Male Type 1 Erm 24.wav" } },
+    { "id": "noway", "phrase": "No way!", "category": "reaction", "sound": { "female": "female/Female Type 1 Reaction 3.wav", "male": "male/Male Type 1 Reaction 25.wav" } },
+    { "id": "pain", "phrase": "That hurt?", "category": "pain", "sound": { "female": "female/Female Type 1 Crying 3.wav", "male": "male/Male Type 2 Pain 3.wav", "femaleFallback": true } },
+    { "id": "laugh", "phrase": "Ha!", "category": "laughing", "sound": { "female": "female/Female Type 1 Laughing 5.wav", "male": "male/Male Type 2 Laughing 3.wav" } },
+    { "id": "sweat", "phrase": "Getting hot?", "category": "exertion", "sound": { "female": "female/Female Type 1 Exertion 12.wav", "male": "male/Male Type 2 Exertion 7.wav" } },
+    { "id": "idle", "phrase": "Any day now…", "category": "idle", "sound": { "female": "female/Female Type 1 Idle 4.wav", "male": "male/Male Type 2 Idle 6.wav" } },
+    { "id": "scream", "phrase": "NOOO!", "category": "screaming", "sound": { "female": "female/Female Type 1 Reaction 3.wav", "male": "male/Male Type 2 Screaming 1.wav", "femaleFallback": true } },
+    { "id": "attack", "phrase": "Come at me.", "category": "attacking", "sound": { "female": "female/Female Type 1 Attacking 21.wav", "male": "male/Male Type 2 Exertion 7.wav", "maleFallback": true } },
+
+    { "id": "watching", "phrase": "I'm watching.", "category": null, "sound": null },
+    { "id": "clown", "phrase": "Nice bluff.", "category": null, "sound": null },
+    { "id": "mia", "phrase": "A Mia?!", "category": null, "sound": null },
+    { "id": "gg", "phrase": "GG.", "category": null, "sound": null },
+    { "id": "salty", "phrase": "Salty?", "category": null, "sound": null },
+    { "id": "slow", "phrase": "…", "category": null, "sound": null },
+
+    { "id": "crown", "phrase": "Mia.", "category": "cheering", "restricted": "global_number_one", "sound": { "female": "female/Female Type 1 Cheering 3.wav", "male": "male/Male Type 1 Cheering 2.wav" } }
+  ]
+}
+```
+
+## Deliverables checklist for the art agent
+- [ ] A mascot character design (turnaround / expression sheet)
+- [ ] One 512×512 transparent PNG per emote id above (21 total), expression only, no text
+- [ ] Consistent style, palette, and character across all
