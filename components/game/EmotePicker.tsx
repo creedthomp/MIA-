@@ -6,7 +6,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { EMOTES, EMOTE_IDS } from "@/utils/emotes";
+import { EMOTE_IDS, EMOTES } from "@/utils/emotes";
 import type { EmoteId } from "@/types/realtimeEvents";
 
 import { COLORS, FONT } from "@/theme";
@@ -15,6 +15,10 @@ const C = COLORS;
 const MONO = FONT.brand;
 
 const COOLDOWN_MS = 4000;
+
+// 21 emotes don't fit one row — the tray wraps into a grid.
+const CELL = 40;
+const COLUMNS = 5;
 
 interface EmotePickerProps {
   onSend: (emote: EmoteId) => void;
@@ -66,6 +70,8 @@ export function EmotePicker({ onSend, bonusIds }: EmotePickerProps) {
           trayStyle,
           {
             flexDirection: "row",
+            flexWrap: "wrap",
+            width: COLUMNS * CELL + 10,
             backgroundColor: C.surface,
             borderWidth: 1.5,
             borderColor: C.border,
@@ -73,7 +79,6 @@ export function EmotePicker({ onSend, bonusIds }: EmotePickerProps) {
             paddingHorizontal: 5,
             paddingVertical: 4,
             marginBottom: 8,
-            gap: 1,
           },
         ]}
         pointerEvents={open ? "auto" : "none"}
@@ -83,14 +88,14 @@ export function EmotePicker({ onSend, bonusIds }: EmotePickerProps) {
             key={id}
             onPress={() => handlePick(id)}
             style={{
-              width: 34,
-              height: 34,
+              width: CELL,
+              height: CELL,
               borderRadius: 10,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Text style={{ fontSize: 18 }}>{EMOTES[id].emoji}</Text>
+            <Text style={{ fontSize: 20 }}>{EMOTES[id].emoji}</Text>
           </TouchableOpacity>
         ))}
       </Animated.View>

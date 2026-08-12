@@ -10,15 +10,30 @@ export type RealtimeEventType =
   | "GAME_OVER"
   | "EMOTE";
 
+// Spec: docs/emote-spec.md
 export type EmoteId =
+  // Voiced
+  | "objection"
+  | "boo"
+  | "cheer"
+  | "cry"
+  | "think"
+  | "trust"
+  | "erm"
+  | "noway"
+  | "pain"
   | "laugh"
-  | "doubt"
-  | "shock"
-  | "cool"
   | "sweat"
-  | "taunt"
-  | "liar"
-  | "hurry"
+  | "idle"
+  | "scream"
+  | "attack"
+  // Silent
+  | "watching"
+  | "clown"
+  | "mia"
+  | "gg"
+  | "salty"
+  | "slow"
   | "crown"; // exclusive to the current global #1 ("the Mia")
 
 export interface EmotePayload {
