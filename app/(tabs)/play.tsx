@@ -13,7 +13,7 @@ import {
   ScrollView,
   Switch,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useStore } from "@/services/store";
 import { supabase } from "@/services/supabase";
 import { createRoom, joinByCode, findOrJoinQuickMatch } from "@/services/roomService";
@@ -710,7 +710,21 @@ export default function PlayScreen() {
   const isWide = width >= 700;
   const maxW = Math.min(width, 560);
 
-  const [activeTab,        setActiveTab]        = useState<Tab>("play");
+  // The active tab lives in the URL (?tab=shop) so a browser reload — or a
+  // shared link — restores the tab instead of snapping back to Play.
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const tabParam = Array.isArray(tab) ? tab[0] : tab;
+  const [activeTab, setActiveTab] = useState<Tab>(
+    TABS.some((t) => t.id === tabParam) ? (tabParam as Tab) : "play",
+  );
+
+  function selectTab(t: Tab) {
+    setActiveTab(t);
+    setHomeError(null);
+    // Keep the URL in sync; Play (the default) keeps a clean URL.
+    router.setParams({ tab: t === "play" ? undefined : t });
+  }
+
   const [loading,          setLoading]          = useState<"create" | "quick" | "join" | null>(null);
   const [homeError,        setHomeError]        = useState<string | null>(null);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
@@ -787,7 +801,7 @@ export default function PlayScreen() {
         </View>
 
         {/* ── Tab bar ── */}
-        <TabBar active={activeTab} onSelect={(t) => { setActiveTab(t); setHomeError(null); }} />
+        <TabBar active={activeTab} onSelect={selectTab} />
 
         {/* ── Play tab ── */}
         {activeTab === "play" && (
