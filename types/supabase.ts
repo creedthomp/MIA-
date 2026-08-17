@@ -87,6 +87,30 @@ export type Database = {
         }
         Relationships: []
       }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       game_events: {
         Row: {
           created_at: string
@@ -194,16 +218,19 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string
+          friend_code: string | null
           id: string
         }
         Insert: {
           created_at?: string
           display_name: string
+          friend_code?: string | null
           id: string
         }
         Update: {
           created_at?: string
           display_name?: string
+          friend_code?: string | null
           id?: string
         }
         Relationships: []

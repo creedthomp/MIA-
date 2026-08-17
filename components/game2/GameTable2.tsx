@@ -65,8 +65,8 @@ export function GameTable2({
   const Rx = Math.max(120, Math.min(width / 2 - 40, 300));
   const Ry = Math.max(100, Math.min(height * 0.26, Rx * 0.78, 190));
   const cx = width / 2;
-  const cy = Ry + 115;
-  const TABLE_H = 2 * Ry + 230;
+  const cy = Ry + 124;
+  const TABLE_H = 2 * Ry + 248;
 
   const n = players.length;
   const myIdx = Math.max(0, players.findIndex((p) => p.id === myId));
@@ -81,7 +81,7 @@ export function GameTable2({
     const sin = Math.sin(angle);
     seatMap[p.id] = {
       x: cx + (Rx - 2) * Math.cos(angle),
-      y: cy + (Ry + (sin > 0 ? 20 : 56)) * sin,
+      y: cy + (Ry + (sin > 0 ? 24 : 64)) * sin,
       angle,
     };
   });

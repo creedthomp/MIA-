@@ -14,7 +14,8 @@ import { supabase } from "@/services/supabase";
 import { useStore } from "@/services/store";
 import { subscribeToGame, unsubscribeFromGame, broadcastGameEvent } from "@/services/gameChannel";
 import { initGameTurn } from "@/services/gameService";
-import { playEmotePop, unloadSounds } from "@/services/sounds";
+import { playEmotePop, playEmoteVoice, unloadSounds } from "@/services/sounds";
+import { voiceForUser } from "@/utils/voice";
 import { formatDeclaration } from "@/utils/declarations";
 import { getRank } from "@/utils/rollHierarchy";
 import { nextActivePlayer } from "@/utils/turnOrder";
@@ -271,8 +272,11 @@ export default function GameScreen() {
       case "EMOTE": {
         const { userId, emote } = lastEvent.payload;
         // Muting hides other players' emotes; your own always show
-        if (useStore.getState().emotesMuted && userId !== user?.id) break;
+        const muted = useStore.getState().emotesMuted;
+        if (muted && userId !== user?.id) break;
         playEmotePop();
+        // Voice line in that player's voice — silenced by the mute setting
+        if (!muted) playEmoteVoice(emote, voiceForUser(userId));
         emoteKeyRef.current += 1;
         const key = emoteKeyRef.current;
         setActiveEmotes((prev) => ({ ...prev, [userId]: { emote, key } }));
